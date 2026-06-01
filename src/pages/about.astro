@@ -1,6 +1,8 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { Icon } from "astro-icon/components";
+import { Image } from "astro:assets";
+import profile from "../assets/profile.png";
 
 const title = "About Me";
 const description = "AI and Security, plus engineering, powered by coffee.";
@@ -8,6 +10,14 @@ const description = "AI and Security, plus engineering, powered by coffee.";
 
 <BaseLayout title={title} description={description}>
   <div class="title prose lg:prose-lg mx-auto mb-12 text-center">
+    <Image
+      src={profile}
+      width={320}
+      height={320}
+      alt="Irad Aharoni"
+      loading="eager"
+      class="mx-auto mb-6 h-40 w-40 rounded-full object-cover shadow-md ring-1 ring-black/5"
+    />
     <h1 class="text-center text-6xl font-bold">{title}</h1>
     <p class="mt-4 text-gray-500">{description}</p>
     <hr />
@@ -29,8 +39,15 @@ const description = "AI and Security, plus engineering, powered by coffee.";
   <section class="mb-8">
     <h2 class="mb-8 text-center text-5xl font-bold">Current Role</h2>
     <p class="mt-2">
-      <strong>Founding Engineer</strong> helping shape AI-native cyber at Stealth
-      - lots of whiteboards, coffee, and shipping.
+      <strong>Founding AI Research Engineer at Novee</strong>, where we're
+      building AI-native offensive security - an AI system that continuously
+      pentests real environments to surface exploitable vulnerabilities before
+      attackers do. I was the <strong>second developer</strong> on the team and an
+      integral part of developing the Core AI Agent logic in the first year of Novee's
+      founding. Now I'm on the <strong>Harness & Agent Research</strong> team, building
+      the evaluation stack that measures and sharpens our security agents: model
+      benchmarking, eval harnesses, and LLM-as-judge scoring. Lots of whiteboards,
+      coffee, and shipping.
     </p>
   </section>
 

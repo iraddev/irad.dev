@@ -2,7 +2,8 @@
 import HeaderLink from "./HeaderLink.astro";
 import { SITE_TITLE } from "../consts";
 import { Icon } from "astro-icon/components";
-import Logo from "../assets/icon.svg";
+import { Image } from "astro:assets";
+import logo from "../assets/logo.png";
 ---
 
 <header class="bg-white px-4 shadow-md">
@@ -12,7 +13,16 @@ import Logo from "../assets/icon.svg";
         href="/"
         class="flex items-center gap-2 border-b-4 border-transparent px-2 py-4 font-mono text-black no-underline"
       >
-        <Logo width={40} height={40} />
+        <Image
+          src={logo}
+          width={40}
+          height={40}
+          densities={[1, 2, 3]}
+          quality={95}
+          alt={SITE_TITLE}
+          loading="eager"
+          class="rounded-full"
+        />
         {SITE_TITLE}
       </a>
     </h2>
