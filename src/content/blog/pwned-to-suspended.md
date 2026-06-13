@@ -40,11 +40,11 @@ Here's the thing: we just watched three different ways to gate access to defensi
 
 - **By passport** — the government's directive.[^2] The dumbest possible filter: blocks legit foreign defenders, zero friction for adversaries. Anthropic itself argued that applying this standard industry‑wide would "essentially halt all new model deployments."
 - **By club membership** — Anthropic's Glasswing[^1] reserved its most capable model for ~a dozen launch partners (AWS, Microsoft, Google, Apple, and friends) plus a few dozen hand‑picked critical‑infrastructure orgs. Better than passports, still arbitrary.
-- **By verified identity and intent** — OpenAI's Trusted Access for Cyber (TAC).[^3] Defenders prove who they are and get lower classifier‑based refusals for real defensive work (vulnerability triage, malware analysis, reverse engineering, detection engineering, patch validation), with stronger account security required at higher tiers. An individual researcher can self‑verify at `chatgpt.com/cyber` and get in.
+- **By verified identity and intent** — OpenAI's Trusted Access for Cyber (TAC).[^3] Defenders prove who they are and get lower classifier‑based refusals for real defensive work (vulnerability triage, malware analysis, reverse engineering, detection engineering, patch validation), with stronger account security required at higher tiers. An individual researcher can self‑verify at `chatgpt.com/cyber` and get into real defensive capability — no club required.
 
-Only one of these actually scales trust to the people doing the defending. It's not the passport. It's not the club.
+That third axis — *who you are* and *what you're trying to do* — is the only one that actually predicts misuse, and the only one that scales trust down to the individual defender. It's not the passport. It's not the club.
 
-TAC isn't perfect, identity verification has its own failure modes, and "trust us, it's authorized" is a load‑bearing assumption. But it's the only one of the three that gates on the two things that actually predict misuse: *who you are* and *what you're trying to do*.
+But don't hand OpenAI a medal yet. Self‑verification only gets you the mid tier. The *most capable* models (GPT‑5.5‑Cyber, Enterprise and Government TAC) revert straight back to club membership: an existing service agreement, an account director, SOC 2 Type II or ISO 27001, OpenAI sign‑off.[^5] The right axis, and then the frontier reserved for a members' list anyway. Nobody has fully escaped the club.
 
 ### Bottom line
 
@@ -63,4 +63,6 @@ Gate on who someone is and what they're trying to do — not which border they w
 [^3]: [OpenAI — Scaling Trusted Access for Cyber with GPT‑5.5 and GPT‑5.5‑Cyber](https://openai.com/index/gpt-5-5-with-trusted-access-for-cyber/)
 
 [^4]: [Pliny the Liberator — "JAILBREAK ALERT" write‑up](https://x.com/elder_plinius/status/2064776322979676227), detailing the multi‑agent techniques and the cyber, chemical, explosives, and manipulation uplift recovered from Fable 5.
+
+[^5]: [OpenAI — Enterprise Trusted Access for Cyber intake form](https://openai.com/form/enterprise-trusted-access-for-cyber/), listing the service‑agreement, account‑director, SOC 2 / ISO 27001, and approval requirements for the most capable TAC tiers.
 
