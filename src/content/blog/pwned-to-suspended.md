@@ -18,9 +18,11 @@ So here's the speedrun:
 
 Today the government issued an export‑control directive[^2] suspending Fable 5 and Mythos 5 for every foreign national, inside or outside the US, including Anthropic's own employees.
 
-The trigger? A "jailbreak." Want to know what it actually was? Asking the model to read a specific codebase and fix software flaws. That's the weapon. By Anthropic's own account, the technique surfaced a handful of minor, already‑discoverable bugs that other publicly available models find every single day, no jailbreak required.
+The trigger? A "jailbreak." Want to know what it actually was? Asking the model to read a specific codebase and fix the software flaws in it. That's the "weapon": the exact thing defenders do all day.
 
-So a model got yanked from hundreds of millions of users because it did the exact thing defenders do all day: read code, find bugs, fix them.
+And here's where I part ways with Anthropic. Their response was to downplay it, the bugs were minor, already discoverable, nothing other models can't already find. We shouldn't. Not just because a company that spent months bragging about thousands of zero‑days and a 27‑year‑old OpenBSD flaw has forfeited the right to suddenly call its own output trivial, but because the strength of the capability is the entire point.
+
+If reading code and fixing flaws is a genuine cyber superweapon, take it seriously, fully. But then the only question that matters is *who gets to wield it*, and "everyone on Earth except foreign nationals" is not a serious answer. Downplaying the jailbreak lets everyone argue about whether the recall was an overreaction. It wasn't an overreaction to a capability. It was the wrong response to a real one.
 
 ### This isn't an argument against AI safety
 
