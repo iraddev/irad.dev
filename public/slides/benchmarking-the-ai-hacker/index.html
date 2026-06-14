@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Benchmarking the AI Hacker — hayaData 2026</title>
+    <link rel="icon" type="image/png" href="assets/novee-icon.png" />
     <link href="assets/fonts.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
     <style>
@@ -338,7 +339,7 @@
       <div id="deck">
 
         <!-- ===== S1 — Title ===== -->
-        <section class="slide centered" id="s1" data-kicker="Title">
+        <section class="slide top" id="s1" data-kicker="Title">
           <div class="scene">
             <div class="kicker">hayaData 2026 · deep dive</div>
             <div class="title-h display">Benchmarking the <span class="ac">AI Hacker</span></div>
@@ -910,7 +911,7 @@
       function center(s) {
         const sc = s.querySelector(".scene");
         if (!sc) return;
-        if (s.classList.contains("centered")) { sc.style.transform = "none"; return; }
+        if (s.classList.contains("centered") || s.classList.contains("top")) { sc.style.transform = "none"; return; }
         sc.style.transform = "none";
         const kids = [...sc.children].filter((el) => !el.classList.contains("notes") && (el.offsetWidth || el.offsetHeight));
         // restore any prior footer repositioning (idempotent on revisit)
