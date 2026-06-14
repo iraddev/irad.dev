@@ -339,7 +339,7 @@
       <div id="deck">
 
         <!-- ===== S1 — Title ===== -->
-        <section class="slide top" id="s1" data-kicker="Title">
+        <section class="slide centered" id="s1" data-kicker="Title">
           <div class="scene">
             <div class="kicker">hayaData 2026 · deep dive</div>
             <div class="title-h display">Benchmarking the <span class="ac">AI Hacker</span></div>
@@ -908,12 +908,12 @@
       };
 
       /* ---------- vertical centering: balance the content block in the 1080 stage ---------- */
-      // Pin the header (kicker + headline) at the top; vertically center the body BELOW it.
+      // Pin the header (kicker + headline) at the top; place the body a consistent margin below it (never centered, never a 0 gap).
       function center(s) {
         const sc = s.querySelector(".scene");
         if (!sc) return;
         sc.style.transform = "none";
-        if (s.classList.contains("centered") || s.classList.contains("top")) return; // title/close: flex-centered
+        if (s.classList.contains("centered")) return; // opening / closing: flex-centered
         const kids = [...sc.children].filter((el) => !el.classList.contains("notes") && (el.offsetWidth || el.offsetHeight));
         // restore prior positioning so we always measure the authored layout (idempotent on revisit)
         kids.forEach((el) => {
@@ -939,12 +939,11 @@
           if (el.dataset.cTop === undefined) el.dataset.cTop = el.style.top || "";
           el.style.bottom = "auto"; el.style.top = cur + "px"; cur += el.offsetHeight + 14;
         });
-        const bodyTop = mt, bodyBot = foots.length ? cur - 14 : mb, bodyH = bodyBot - bodyTop;
-        // center the body block in the region between the header and the bottom margin
-        const GAP = 60, BOTTOM = 1004;
-        const regionTop = hb + GAP;
-        const desiredTop = Math.max(regionTop, Math.round((regionTop + BOTTOM - bodyH) / 2));
-        const dy = desiredTop - bodyTop;
+        // top-align the body a consistent margin below the header — never centered, never a 0 gap
+        const TOPGAP = 88, BOTTOM = 1004, MINGAP = 44;
+        const bodyBot = foots.length ? cur - 14 : mb;
+        let dy = (hb + TOPGAP) - mt;
+        if (bodyBot + dy > BOTTOM) dy = Math.max((hb + MINGAP) - mt, BOTTOM - bodyBot); // tall body: keep a bottom margin without crowding the header
         const targets = body.map((el) => [el, el.offsetTop + dy]); // read all before writing
         targets.forEach(([el, top]) => {
           if (el.dataset.cTop === undefined) el.dataset.cTop = el.style.top || "";
