@@ -106,7 +106,7 @@
       .frow .fname { flex: 1; color: var(--fg); } .frow .fstat { font-size: 23px; color: var(--dim); }
       .frow.silent { border-top: 1px solid rgba(142,85,253,0.18); margin-top: 6px; padding-top: 18px; } .frow.silent .fname { color: var(--cyan); }
       .codeline { font-size: 29px; line-height: 1.8; }
-      .codeline.struck { color: var(--dim); position: relative; }
+      .codeline.struck { color: var(--dim); position: relative; display: inline-block; }
       .strike-bar { position: absolute; left: 0; top: 50%; height: 3px; width: 100%; background: var(--red); transform-origin: left center; transform: scaleX(0); }
       .counter-row { display: flex; justify-content: space-between; font-size: 30px; margin-top: 6px; }
       .counter-row .cval { color: var(--cyan); font-variant-numeric: tabular-nums; }
@@ -195,7 +195,8 @@
 
       /* generic staggered rows */
       .rstack { position: absolute; left: 150px; top: 300px; display: flex; flex-direction: column; gap: 22px; max-width: 1400px; }
-      .r { font-size: 40px; color: var(--fg); display: flex; align-items: baseline; gap: 22px; line-height: 1.18; }
+      .r { font-size: 40px; color: var(--fg); line-height: 1.18; }
+      .r:has(.bullet) { display: flex; align-items: baseline; gap: 22px; }
       .r .bullet { color: var(--cyan); font-size: 26px; flex: none; }
       .r em { font-style: normal; color: var(--cyan); }
       .r .amx { color: var(--amber); font-style: normal; }
@@ -221,7 +222,7 @@
       .report-card .big .il { font-size: 22px; color: var(--amber); vertical-align: super; letter-spacing: 0.04em; }
       .report-card .fline { font-size: 26px; color: var(--fg); padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.06); display: flex; gap: 16px; align-items: baseline; }
       .report-card .fline .q { color: var(--red); }
-      .soblock { position: absolute; right: 150px; top: 400px; font-size: 120px; color: var(--dim); opacity: 0.35; }
+      .soblock { position: absolute; left: 150px; top: 690px; font-size: 92px; color: var(--dim); opacity: 0.28; }
 
       /* three-reason panels (slide 5) */
       .reasons { position: absolute; left: 150px; right: 150px; top: 320px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
@@ -263,7 +264,7 @@
       .repair .rstep .rmeta { font-size: 20px; color: var(--dim); margin-left: auto; }
       .repair .worst { margin-top: 18px; font-size: 24px; color: var(--cyan); }
       .asym { position: absolute; right: 150px; top: 330px; width: 760px; }
-      .asym .ah { font-size: 23px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); margin-bottom: 16px; }
+      .ah { font-size: 23px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); margin-bottom: 16px; }
       .asym .arow { font-size: 26px; color: var(--fg); padding: 12px 0; line-height: 1.4; display: flex; gap: 16px; align-items: baseline; }
       .asym .arow .g { color: var(--amber); flex: none; } .asym .arow .keep { color: var(--cyan); flex: none; }
 
@@ -572,6 +573,7 @@
             <div class="kicker">The judge · C &amp; D</div>
             <div class="scene-h display" style="position:absolute;left:150px;top:172px">One bounded repair. A severity asymmetry.</div>
             <div class="repair">
+              <div class="ah">C · one bounded repair</div>
               <div class="rstep r"><span class="rdot"></span><span class="rlabel">invoke</span><span class="rmeta">call 1</span></div>
               <div class="rstep r"><span class="rdot"></span><span class="rlabel">validate cross-array invariants</span><span class="rmeta">in code</span></div>
               <div class="rstep r"><span class="rdot"></span><span class="rlabel">re-prompt with error list — once</span><span class="rmeta">call 2</span></div>
@@ -817,6 +819,7 @@
 
       /* ---------- nav state ---------- */
       const STILL = /[?&]still/.test(location.search);  /* ?still snaps animations to final frame (print / screenshot) */
+      const SEEK = (location.search.match(/[?&]at=([0-9.]+)/) || [])[1];  /* ?at=0..1 freezes animation at a progress (debug) */
       const slides = [...document.querySelectorAll(".slide")];
       const N = slides.length;
       let i = 0;
@@ -870,6 +873,7 @@
         s11(q, tl) {
           tl.fromTo(q(".jpanel"), { opacity: 0, y: 24 }, { opacity: 1, y: 0, stagger: 0.12, duration: 0.45, ease: "power3.out" }, "<0.05");
           tl.fromTo(q(".frow"), { opacity: 0, x: -16 }, { opacity: 1, x: 0, stagger: 0.12, duration: 0.3 }, ">-0.2");
+          tl.fromTo(q(".p-right .codeline, .p-right .counter-row, .p-right .jchip"), { opacity: 0, x: 16 }, { opacity: 1, x: 0, stagger: 0.1, duration: 0.3 }, "<");
           tl.fromTo(q(".strike-bar"), { scaleX: 0 }, { scaleX: 1, duration: 0.45, ease: "power2.inOut" }, ">");
         },
         s12(q, tl) {
@@ -966,7 +970,8 @@
         const r = q(".r");
         if (r.length) tl.fromTo(r, { opacity: 0, y: 28 }, { opacity: 1, y: 0, duration: 0.45, stagger: 0.08, ease: "power2.out" }, 0.12);
         (SPECIAL[s.id] || function () {})(q, tl);
-        if (STILL) tl.progress(1);
+        if (STILL) tl.progress(1).pause();
+        else if (SEEK != null) tl.progress(Math.max(0, Math.min(1, +SEEK))).pause();
         return tl;
       }
 
