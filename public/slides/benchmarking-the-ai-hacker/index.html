@@ -1,0 +1,1041 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Benchmarking the AI Hacker — hayaData 2026</title>
+    <link href="assets/fonts.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      /* ============================================================
+         TEASER TOKENS + CHROME + COMPONENTS (copied verbatim)
+         ============================================================ */
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      :root {
+        --bg: #0b0e14;
+        --panel: #11151f;
+        --panel2: #0e1119;
+        --fg: #e6edf3;
+        --dim: #9aa6b8;
+        --cyan: #8e55fd;        /* Novee purple — main accent (fills, bars, large text) */
+        --cyan-bright: #c9a8ff;
+        --acc-txt: #a07cff;     /* slightly lighter purple for SMALL label text (AA on dark) */
+        --amber: #ffb020;       /* contrast / over-claim trap */
+        --red: #ff4d4d;
+        --line: rgba(142, 85, 253, 0.12);
+      }
+      .display { font-family: "Archivo Black", "Arial Black", sans-serif; letter-spacing: -0.02em; }
+
+      /* ---------- persistent chrome ---------- */
+      #chrome { position: absolute; inset: 0; background: var(--bg); z-index: 0; }
+      .grid { position: absolute; inset: 0;
+        background-image: linear-gradient(to right, var(--line) 1px, transparent 1px), linear-gradient(to bottom, var(--line) 1px, transparent 1px);
+        background-size: 64px 64px; }
+      .scanlines { position: absolute; inset: 0; opacity: 0.5; mix-blend-mode: overlay;
+        background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.05) 0, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 4px); }
+      .vignette { position: absolute; inset: 0; background: radial-gradient(120% 120% at 50% 45%, transparent 55%, rgba(0,0,0,0.55) 100%); }
+      .glow { position: absolute; left: 50%; top: 46%; width: 1300px; height: 1300px; transform: translate(-50%, -50%); border-radius: 50%;
+        background: radial-gradient(circle, rgba(142,85,253,0.12) 0%, transparent 62%);
+        animation: glow-breathe 12s ease-in-out infinite; }
+      @keyframes glow-breathe { 0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 50% { transform: translate(-50%, -50%) scale(1.16); opacity: 0.6; } }
+      .reg { position: absolute; width: 26px; height: 26px; opacity: 0.5; }
+      .reg::before, .reg::after { content: ""; position: absolute; background: var(--cyan); }
+      .reg::before { width: 26px; height: 2px; top: 0; }
+      .reg::after { width: 2px; height: 26px; left: 0; }
+      .reg.tl { top: 40px; left: 40px; } .reg.tr { top: 40px; right: 40px; transform: scaleX(-1); }
+      .reg.bl { bottom: 40px; left: 40px; transform: scaleY(-1); } .reg.br { bottom: 40px; right: 40px; transform: scale(-1, -1); }
+      .statusbar { position: absolute; top: 44px; left: 90px; right: 90px; height: 30px; display: flex; align-items: center; gap: 18px;
+        font-size: 19px; color: var(--dim); letter-spacing: 0.12em; text-transform: uppercase; }
+      .rec-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--red); animation: rec-blink 1.2s steps(1) infinite; }
+      @keyframes rec-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+      .statusbar .sep { flex: 1; height: 1px; background: var(--line); }
+      .sb-logo { display: inline-flex; align-items: center; margin-right: 4px; }
+      .brand-logo { height: 26px; width: auto; display: block; }
+      .progress-track { position: absolute; bottom: 48px; left: 90px; right: 90px; height: 3px; background: rgba(255,255,255,0.07); }
+      #progress-fill { position: absolute; left: 0; top: 0; height: 100%; width: 100%; background: var(--cyan); transform-origin: left center; transform: scaleX(0); box-shadow: 0 0 14px rgba(142,85,253,0.6); transition: transform .4s ease; }
+      .progress-label { position: absolute; bottom: 60px; right: 90px; font-size: 17px; color: var(--dim); letter-spacing: 0.18em; }
+
+      /* ---------- shared scene utilities ---------- */
+      .scene { position: absolute; inset: 0; padding: 126px 150px 118px; }
+      .kicker { font-size: 22px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--acc-txt); margin-bottom: 16px; }
+      .scene-h { font-size: 82px; color: var(--fg); line-height: 0.96; }
+      .scene-h .ac { color: var(--cyan); }
+      .scene-sub { font-size: 32px; color: var(--cyan); margin-top: 16px; letter-spacing: 0.01em; }
+      .scene-sub.dim { color: var(--dim); }
+      .panel { background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; }
+      .num { color: var(--cyan); font-weight: 700; display: inline-block; }
+      .am { color: var(--amber); }
+      .meta-foot { position: absolute; left: 150px; bottom: 150px; font-size: 22px; color: var(--dim); letter-spacing: 0.06em; }
+
+      /* terminal */
+      .terminal { position: absolute; top: 250px; left: 150px; width: 1180px; background: var(--panel); border: 1px solid rgba(142,85,253,0.22); border-radius: 10px; box-shadow: 0 30px 90px rgba(0,0,0,0.6); overflow: hidden; }
+      .term-head { display: flex; align-items: center; gap: 12px; padding: 18px 22px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+      .term-dot { width: 13px; height: 13px; border-radius: 50%; }
+      .term-title { margin-left: 14px; font-size: 18px; color: var(--dim); letter-spacing: 0.08em; }
+      .term-body { padding: 34px 30px; font-size: 38px; line-height: 1.5; }
+      .prompt { color: var(--cyan); }
+
+      /* editor */
+      .editor { position: absolute; top: 290px; left: 150px; width: 1160px; background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; box-shadow: 0 30px 90px rgba(0,0,0,0.55); }
+      .editor-head { display: flex; gap: 26px; padding: 16px 26px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 18px; color: var(--dim); }
+      .editor-head .path { color: var(--fg); }
+      .code { padding: 24px 0; font-size: 29px; line-height: 1.6; }
+      .ln { display: flex; gap: 24px; padding: 0 30px; }
+      .gutter { width: 38px; text-align: right; color: #7d8a9c; }
+      .k-cyan { color: var(--cyan); } .k-amber { color: var(--amber); } .str { color: #9fb2c4; } .punc { color: var(--dim); }
+      .trap-tag { display: inline-block; margin-left: 16px; font-size: 20px; color: var(--amber); border: 1px solid var(--amber); border-radius: 4px; padding: 2px 10px; letter-spacing: 0.06em; }
+      .s3-side { position: absolute; left: 1360px; top: 300px; display: flex; flex-direction: column; gap: 18px; max-width: 380px; }
+      .s3-side .lbl { font-size: 24px; color: var(--fg); } .s3-side .lbl .c { color: var(--cyan); } .s3-side .lbl .a { color: var(--amber); }
+      .s3-side .note { font-size: 21px; color: var(--dim); line-height: 1.5; margin-top: 8px; }
+
+      /* targets */
+      .targets { position: absolute; left: 150px; right: 150px; top: 300px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; }
+      .tcard { background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 26px 22px; }
+      .tcard .tname { font-size: 30px; color: var(--fg); } .tcard .tname b { color: var(--cyan); }
+      .tcard .tclass { margin-top: 10px; font-size: 21px; color: var(--acc-txt); letter-spacing: 0.04em; }
+      .tcard .tver { margin-top: 16px; font-size: 18px; color: var(--dim); }
+      .tcard .tline { margin-top: 14px; height: 5px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+      .tcard .tline > i { display: block; height: 100%; width: 100%; background: var(--cyan); transform-origin: left center; transform: scaleX(0); }
+
+      /* judge panels */
+      .jpanel { position: absolute; top: 300px; width: 760px; height: 540px; background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 28px 32px; }
+      .p-left { left: 150px; } .p-right { left: 980px; }
+      .panel-h { font-size: 23px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); margin-bottom: 22px; }
+      .frow { display: flex; align-items: center; gap: 18px; font-size: 29px; padding: 12px 0; }
+      .frow .fdot { width: 15px; height: 15px; border-radius: 50%; flex: none; }
+      .frow .fname { flex: 1; color: var(--fg); } .frow .fstat { font-size: 23px; color: var(--dim); }
+      .frow.silent { border-top: 1px solid rgba(142,85,253,0.18); margin-top: 6px; padding-top: 18px; } .frow.silent .fname { color: var(--cyan); }
+      .codeline { font-size: 29px; line-height: 1.8; }
+      .codeline.struck { color: var(--dim); position: relative; }
+      .strike-bar { position: absolute; left: 0; top: 50%; height: 3px; width: 100%; background: var(--red); transform-origin: left center; transform: scaleX(0); }
+      .counter-row { display: flex; justify-content: space-between; font-size: 30px; margin-top: 6px; }
+      .counter-row .cval { color: var(--cyan); font-variant-numeric: tabular-nums; }
+      .jchip { position: absolute; bottom: 28px; left: 32px; font-size: 20px; color: var(--acc-txt); border: 1px solid var(--cyan); border-radius: 5px; padding: 6px 14px; }
+
+      /* confusion matrix */
+      .cm { position: absolute; left: 150px; top: 320px; display: grid; grid-template-columns: 240px 300px 300px; grid-template-rows: 70px 150px 150px; gap: 0; }
+      .cm .h { display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--dim); letter-spacing: 0.06em; text-align: center; }
+      .cm .rh { display: flex; align-items: center; font-size: 22px; color: var(--dim); padding-right: 18px; text-align: right; justify-content: flex-end; }
+      .cm .cell { margin: 8px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border: 1px solid rgba(255,255,255,0.08); }
+      .cm .cell .ct { font-size: 26px; font-weight: 700; } .cm .cell .cl { font-size: 19px; color: var(--dim); }
+      .cell.tp { background: rgba(142,85,253,0.18); border-color: var(--cyan); } .cell.tp .ct { color: var(--cyan); }
+      .cell.fp { background: rgba(255,176,32,0.14); border-color: var(--amber); } .cell.fp .ct { color: var(--amber); }
+      .cell.fn { background: rgba(255,77,77,0.12); border-color: var(--red); } .cell.fn .ct { color: var(--red); }
+      .cell.tn { background: rgba(142,85,253,0.07); } .cell.tn .ct { color: var(--dim); }
+      .pr-formulas { position: absolute; right: 150px; top: 360px; display: flex; flex-direction: column; gap: 36px; }
+      .formula { font-size: 34px; color: var(--fg); } .formula .lab { color: var(--cyan); } .formula .den { color: var(--dim); } .formula .small { display: block; font-size: 21px; color: var(--dim); margin-top: 8px; }
+      .formula .amden { color: var(--amber); }
+
+      /* rubric */
+      .rubric { position: absolute; left: 150px; top: 300px; width: 1080px; }
+      .rcrit { display: flex; align-items: center; gap: 22px; font-size: 36px; padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+      .rcrit .mark { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex: none; }
+      .rcrit .mark.ok { background: rgba(142,85,253,0.18); color: var(--cyan); border: 1px solid var(--cyan); }
+      .rcrit .mark.part { background: rgba(255,176,32,0.16); color: var(--amber); border: 1px solid var(--amber); }
+      .rcrit .rtext { color: var(--fg); }
+      .rubric-side { position: absolute; right: 150px; top: 320px; width: 360px; font-size: 24px; color: var(--dim); line-height: 1.6; }
+      .rubric-side b { color: var(--cyan); }
+
+      /* trajectory tree */
+      .tree { position: absolute; left: 150px; top: 300px; font-size: 30px; line-height: 1.66; }
+      .tnode { display: flex; align-items: center; gap: 16px; }
+      .tnode .branch { color: var(--dim); } .tnode .nname { color: var(--fg); } .tnode .nname.root { color: var(--cyan); font-weight: 700; }
+      .tnode .tag { font-size: 18px; padding: 1px 9px; border-radius: 4px; letter-spacing: 0.04em; }
+      .tnode .tag.llm { color: var(--acc-txt); border: 1px solid rgba(142,85,253,0.5); } .tnode .tag.tool { color: var(--dim); border: 1px solid rgba(255,255,255,0.14); }
+      .tnode .tag.reflect { color: var(--amber); border: 1px solid rgba(255,176,32,0.5); }
+      .traj-side { position: absolute; right: 150px; top: 300px; width: 430px; }
+      .traj-stat { background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 22px 26px; margin-bottom: 18px; }
+      .traj-stat .sl { font-size: 20px; color: var(--dim); letter-spacing: 0.08em; } .traj-stat .sv { font-size: 40px; color: var(--cyan); font-variant-numeric: tabular-nums; }
+      .traj-punch { position: absolute; left: 150px; bottom: 150px; font-size: 34px; color: var(--dim); max-width: 1500px; } .traj-punch em { font-style: normal; color: var(--fg); }
+
+      /* coverage surface */
+      .surface { position: absolute; left: 150px; top: 310px; display: grid; grid-template-columns: repeat(3, 360px); gap: 18px; }
+      .scell { background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 20px 22px; display: flex; align-items: center; gap: 16px; font-size: 26px; }
+      .scell .dot { width: 14px; height: 14px; border-radius: 50%; flex: none; background: #2c333f; }
+      .scell.hit .dot { background: var(--cyan); box-shadow: 0 0 12px rgba(142,85,253,0.7); } .scell.hit { color: var(--fg); }
+      .scell.miss { color: var(--dim); }
+      .cov-side { position: absolute; right: 150px; top: 330px; width: 360px; font-size: 24px; color: var(--dim); line-height: 1.6; } .cov-side b { color: var(--cyan); }
+
+      /* matrix */
+      .matrix { position: absolute; left: 150px; top: 320px; display: grid; grid-template-columns: 180px repeat(5, 150px); gap: 12px; align-items: center; }
+      .matrix .mh { font-size: 21px; color: var(--dim); text-align: center; letter-spacing: 0.04em; text-transform: uppercase; }
+      .matrix .mr { font-size: 24px; color: var(--fg); }
+      .matrix .mcell { height: 64px; background: var(--panel); border: 1px solid rgba(255,255,255,0.07); border-radius: 7px; overflow: hidden; display: flex; align-items: flex-end; }
+      .matrix .mcell > i { display: block; width: 100%; background: linear-gradient(to top, var(--cyan), var(--cyan-bright)); transform-origin: bottom center; transform: scaleY(0); height: 100%; }
+      .exp-side { position: absolute; right: 150px; top: 340px; width: 360px; font-size: 24px; color: var(--dim); line-height: 1.55; } .exp-side b { color: var(--cyan); }
+
+      /* axes */
+      .axes { position: absolute; left: 150px; right: 150px; top: 320px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; }
+      .axis { background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 30px 26px; }
+      .axis .an { font-size: 21px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--acc-txt); } .axis .at { margin-top: 16px; font-size: 30px; color: var(--fg); line-height: 1.15; } .axis .ad { margin-top: 14px; font-size: 20px; color: var(--dim); line-height: 1.4; }
+      .axes-punch { position: absolute; left: 150px; bottom: 150px; font-size: 34px; color: var(--cyan); }
+
+      /* ============================================================
+         DECK ENGINE CSS
+         ============================================================ */
+      html, body { height: 100%; }
+      body { margin: 0; background: #000; overflow: hidden; height: 100vh; font-family: "JetBrains Mono", monospace; color: var(--fg); }
+      #stage { position: absolute; top: 50%; left: 50%; width: 1920px; height: 1080px; transform-origin: center center; overflow: hidden; }
+      #deck { position: absolute; inset: 0; z-index: 1; }
+
+      .slide { position: absolute; inset: 0; opacity: 0; visibility: hidden; background: transparent; }
+      .slide.active { opacity: 1; visibility: visible; }
+      .notes { display: none; }   /* in-slide speaker note: hidden on stage, mirrored into the #notes overlay */
+
+      /* centered title/close layout */
+      .slide.centered .scene { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
+      .title-h { font-size: 132px; line-height: 0.94; color: var(--fg); }
+      .title-h .ac { color: var(--cyan); }
+      .deck-underline { height: 8px; width: 720px; background: var(--cyan); transform-origin: left center; transform: scaleX(0); margin-top: 26px; box-shadow: 0 0 24px rgba(142,85,253,0.6); }
+      .title-sub { margin-top: 36px; font-size: 40px; color: var(--cyan); max-width: 1500px; line-height: 1.2; }
+      .title-sub.dim { color: var(--dim); }
+      .title-brand { margin-top: 44px; display: inline-flex; align-items: center; gap: 20px; }
+      .title-brand .by { font-size: 22px; color: var(--dim); letter-spacing: 0.24em; text-transform: uppercase; }
+      .title-brand img { height: 58px; width: auto; display: block; }
+
+      /* generic staggered rows */
+      .rstack { position: absolute; left: 150px; top: 300px; display: flex; flex-direction: column; gap: 22px; max-width: 1400px; }
+      .r { font-size: 40px; color: var(--fg); display: flex; align-items: baseline; gap: 22px; line-height: 1.18; }
+      .r .bullet { color: var(--cyan); font-size: 26px; flex: none; }
+      .r em { font-style: normal; color: var(--cyan); }
+      .r .amx { color: var(--amber); font-style: normal; }
+      .r .dimx { color: var(--dim); }
+
+      /* foreshadow axis chips */
+      .axis-chips { position: absolute; right: 150px; top: 305px; display: flex; flex-direction: column; gap: 14px; opacity: 0.55; }
+      .axis-chip { font-size: 22px; color: var(--acc-txt); border: 1px solid rgba(142,85,253,0.4); border-radius: 6px; padding: 8px 18px; letter-spacing: 0.1em; text-transform: uppercase; text-align: center; }
+
+      /* agent loop / generic flow */
+      .flow { position: absolute; left: 150px; right: 150px; top: 360px; display: flex; align-items: center; flex-wrap: wrap; gap: 14px; }
+      .pill { background: var(--panel); border: 1px solid rgba(142,85,253,0.3); border-radius: 999px; padding: 18px 30px; font-size: 28px; color: var(--fg); }
+      .pill.alt { border-color: rgba(255,176,32,0.4); }
+      .pill .sub { display: block; font-size: 17px; color: var(--dim); letter-spacing: 0.06em; margin-top: 4px; }
+      .arrow { color: var(--cyan); font-size: 32px; flex: none; }
+      .flow-note { position: absolute; left: 150px; bottom: 168px; font-size: 26px; color: var(--dim); max-width: 1500px; line-height: 1.45; }
+      .flow-note b { color: var(--cyan); }
+
+      /* report mock (slide 4) */
+      .report-card { position: absolute; left: 150px; top: 320px; width: 880px; background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 34px 38px; }
+      .report-card .rh2 { font-size: 24px; color: var(--dim); letter-spacing: 0.14em; text-transform: uppercase; }
+      .report-card .big { font-size: 96px; color: var(--cyan); line-height: 1; margin: 16px 0 8px; }
+      .report-card .big .il { font-size: 22px; color: var(--amber); vertical-align: super; letter-spacing: 0.04em; }
+      .report-card .fline { font-size: 26px; color: var(--fg); padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.06); display: flex; gap: 16px; align-items: baseline; }
+      .report-card .fline .q { color: var(--red); }
+      .soblock { position: absolute; right: 150px; top: 400px; font-size: 120px; color: var(--dim); opacity: 0.35; }
+
+      /* three-reason panels (slide 5) */
+      .reasons { position: absolute; left: 150px; right: 150px; top: 320px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+      .reason { background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 30px 28px; }
+      .reason .rn { font-size: 21px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--acc-txt); }
+      .reason .rt { margin-top: 14px; font-size: 30px; color: var(--fg); line-height: 1.15; }
+      .reason .rd { margin-top: 16px; font-size: 22px; color: var(--dim); line-height: 1.45; }
+      .reason .csp { margin-top: 18px; font-size: 22px; color: var(--dim); }
+      .reason .csp .struck-txt { color: var(--dim); text-decoration: line-through; text-decoration-color: var(--red); }
+      .reason .csp .stamp { display: inline-block; margin-top: 8px; color: var(--amber); border: 1px solid var(--amber); border-radius: 5px; padding: 4px 12px; font-size: 19px; }
+
+      /* two-column generic (slide 8, etc.) */
+      .cols { position: absolute; left: 150px; right: 150px; top: 310px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+      .col { background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 30px 32px; }
+      .col .colh { font-size: 24px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--acc-txt); margin-bottom: 18px; }
+      .col .colh.amh { color: var(--amber); }
+      .col .ci { font-size: 26px; color: var(--fg); padding: 12px 0; line-height: 1.35; }
+      .col .ci .ok { color: var(--cyan); } .col .ci .no { color: var(--amber); }
+      .sev-note { position: absolute; left: 150px; bottom: 150px; font-size: 24px; color: var(--dim); max-width: 1600px; line-height: 1.45; }
+      .sev-note b { color: var(--cyan); } .sev-note .low { color: var(--amber); }
+
+      /* stacked code cards (slide 7) */
+      .codecards { position: absolute; left: 150px; right: 150px; top: 290px; display: flex; flex-direction: column; gap: 24px; }
+      .ccard { background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; }
+      .ccard.pos { border-color: rgba(142,85,253,0.4); }
+      .ccard.neg { border-color: rgba(255,176,32,0.4); }
+      .ccard .cchead { display: flex; align-items: center; gap: 14px; padding: 14px 26px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 19px; letter-spacing: 0.08em; text-transform: uppercase; }
+      .ccard.pos .cchead { color: var(--cyan); } .ccard.neg .cchead { color: var(--amber); }
+      .ccard .ccbody { padding: 18px 30px; font-size: 24px; line-height: 1.5; }
+      .ccard .ccbody .k-cyan { color: var(--cyan); } .ccard .ccbody .k-amber { color: var(--amber); } .ccard .ccbody .str { color: #9fb2c4; } .ccard .ccbody .punc { color: var(--dim); }
+      .ccard .redirect { margin-top: 8px; font-size: 20px; color: var(--dim); } .ccard .redirect b { color: var(--amber); }
+
+      /* repair timeline (slide 12) */
+      .repair { position: absolute; left: 150px; top: 330px; width: 760px; }
+      .repair .rstep { display: flex; align-items: center; gap: 18px; padding: 16px 0; }
+      .repair .rstep .rdot { width: 18px; height: 18px; border-radius: 50%; background: var(--cyan); flex: none; }
+      .repair .rstep .rstop { background: var(--amber); }
+      .repair .rstep .rlabel { font-size: 30px; color: var(--fg); }
+      .repair .rstep .rmeta { font-size: 20px; color: var(--dim); margin-left: auto; }
+      .repair .worst { margin-top: 18px; font-size: 24px; color: var(--cyan); }
+      .asym { position: absolute; right: 150px; top: 330px; width: 760px; }
+      .asym .ah { font-size: 23px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); margin-bottom: 16px; }
+      .asym .arow { font-size: 26px; color: var(--fg); padding: 12px 0; line-height: 1.4; display: flex; gap: 16px; align-items: baseline; }
+      .asym .arow .g { color: var(--amber); flex: none; } .asym .arow .keep { color: var(--cyan); flex: none; }
+
+      /* variance dot plot (slide 14) */
+      .dotplot { position: absolute; left: 150px; top: 360px; width: 1080px; height: 360px; }
+      .dp-axis { position: absolute; left: 0; right: 0; bottom: 60px; height: 2px; background: rgba(255,255,255,0.12); }
+      .dp-dot { position: absolute; width: 26px; height: 26px; border-radius: 50%; background: var(--cyan); transform: translate(-50%, 50%); box-shadow: 0 0 12px rgba(142,85,253,0.6); opacity: 0.85; }
+      .dp-mark { position: absolute; bottom: 60px; width: 3px; height: 200px; }
+      .dp-mark.mean { background: var(--cyan); }
+      .dp-mark.minmax { background: rgba(255,255,255,0.25); }
+      .dp-mark .ml { position: absolute; top: -34px; left: 50%; transform: translateX(-50%); font-size: 20px; white-space: nowrap; color: var(--dim); }
+      .dp-mark.mean .ml { color: var(--cyan); }
+      .dp-label { position: absolute; bottom: 20px; font-size: 20px; color: var(--dim); transform: translateX(-50%); }
+      .pooled { position: absolute; right: 150px; top: 380px; width: 380px; }
+      .pooled .pbox { font-size: 30px; color: var(--dim); border: 1px dashed rgba(255,77,77,0.5); border-radius: 10px; padding: 22px 26px; position: relative; }
+      .pooled .pbox .strike-bar { background: var(--red); }
+      .pooled .pnote { margin-top: 18px; font-size: 22px; color: var(--dim); line-height: 1.5; } .pooled .pnote b { color: var(--cyan); }
+      .var-note { position: absolute; left: 150px; bottom: 150px; font-size: 28px; color: var(--fg); } .var-note em { font-style: normal; color: var(--cyan); }
+
+      /* dual paths (slide 16) */
+      .paths { position: absolute; left: 150px; right: 150px; top: 320px; display: flex; flex-direction: column; gap: 36px; }
+      .pathrow { }
+      .pathrow .pr-h { font-size: 22px; color: var(--acc-txt); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 14px; }
+      .pathrow .pr-flow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+      .pathrow .pp { background: var(--panel); border: 1px solid rgba(142,85,253,0.3); border-radius: 999px; padding: 12px 24px; font-size: 24px; color: var(--fg); }
+      .pathrow .pp.win { border-color: var(--cyan); color: var(--cyan); }
+      .pathrow .pa { color: var(--cyan); font-size: 26px; }
+
+      /* takeaways (slide 21) */
+      .takes { position: absolute; left: 150px; right: 150px; top: 300px; display: flex; flex-direction: column; gap: 18px; }
+      .take { display: flex; align-items: baseline; gap: 26px; font-size: 38px; color: var(--fg); line-height: 1.2; }
+      .take .tnum { font-family: "Archivo Black", sans-serif; color: var(--cyan); font-size: 34px; flex: none; width: 56px; }
+      .take em { font-style: normal; color: var(--cyan); }
+
+      /* small four-axis row (close) */
+      .axis-row { margin-top: 40px; display: flex; gap: 16px; }
+      .axis-row .arc { font-size: 22px; color: var(--acc-txt); border: 1px solid rgba(142,85,253,0.4); border-radius: 6px; padding: 8px 18px; letter-spacing: 0.1em; text-transform: uppercase; }
+
+      /* ============================================================
+         OVERLAY (viewport-fixed, NOT scaled)
+         ============================================================ */
+      #notes { position: fixed; left: 0; right: 0; bottom: 0; max-height: 32vh; overflow: auto; background: rgba(8,10,16,.96); border-top: 2px solid var(--cyan); color: #cdd6e2; font: 18px/1.5 "JetBrains Mono", monospace; padding: 20px 28px; transform: translateY(100%); transition: transform .25s; z-index: 50; }
+      #notes.show { transform: none; }
+      #notes .nh { color: var(--acc-txt); letter-spacing: 0.16em; text-transform: uppercase; font-size: 14px; margin-bottom: 8px; }
+      #hint { position: fixed; bottom: 12px; left: 12px; color: #5a6573; font: 13px "JetBrains Mono", monospace; z-index: 50; opacity: .7; }
+      #help { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(8,10,16,.97); border: 1px solid var(--cyan); border-radius: 12px; padding: 32px 40px; color: #cdd6e2; font: 18px/1.8 "JetBrains Mono", monospace; z-index: 60; box-shadow: 0 30px 90px rgba(0,0,0,0.7); display: none; }
+      #help.show { display: block; }
+      #help h3 { color: var(--cyan); font-size: 22px; margin-bottom: 16px; letter-spacing: 0.08em; }
+      #help kbd { display: inline-block; min-width: 110px; color: var(--acc-txt); }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <!-- persistent chrome -->
+      <div id="chrome">
+        <div class="grid"></div><div class="glow"></div><div class="scanlines"></div><div class="vignette"></div>
+        <span class="reg tl"></span><span class="reg tr"></span><span class="reg bl"></span><span class="reg br"></span>
+        <div class="statusbar">
+          <span class="sb-logo"><img class="brand-logo" src="assets/novee-logo-light.png" alt="Novee" /></span>
+          <span class="rec-dot"></span><span>rec</span><span id="sb-section">Title</span><span class="sep"></span><span>hayaData 2026</span>
+        </div>
+        <div class="progress-track"><div id="progress-fill"></div></div>
+        <div class="progress-label"><span id="counter">01 / 22</span></div>
+      </div>
+
+      <div id="deck">
+
+        <!-- ===== S1 — Title ===== -->
+        <section class="slide centered" id="s1" data-kicker="Title">
+          <div class="scene">
+            <div class="kicker">hayaData 2026 · deep dive</div>
+            <div class="title-h display">Benchmarking the <span class="ac">AI Hacker</span></div>
+            <div class="deck-underline"></div>
+            <div class="title-sub">Ground Truth, LLM Judges, and Trust at Scale</div>
+            <div class="title-brand"><span class="by">by</span><img src="assets/novee-logo-light.png" alt="Novee" /></div>
+          </div>
+          <aside class="notes">Open cold on the artifact: an autonomous agent handed us "it found twelve vulnerabilities." For an ML room, this talk is about measurement, not hacking — "no answer key" is plain English for ground truth. Every lesson transfers to any agent you can't fully predict.</aside>
+        </section>
+
+        <!-- ===== S2 — Agenda ===== -->
+        <section class="slide" id="s2" data-kicker="Agenda">
+          <div class="scene">
+            <div class="kicker">Agenda</div>
+            <div class="scene-h display">A tour of the measurement problem</div>
+            <div class="rstack" style="top:300px">
+              <div class="r"><span class="bullet">01</span><span>The problem — why "it found N" has no truth value</span></div>
+              <div class="r"><span class="bullet">02</span><span>The oracle — ground truth as code; hard negatives</span></div>
+              <div class="r"><span class="bullet">03</span><span>App-class coverage — generalization, not overfitting</span></div>
+              <div class="r"><span class="bullet">04</span><span>The judge — LLM-as-judge, made trustworthy and cheap</span></div>
+              <div class="r"><span class="bullet">05</span><span>Metrics &amp; variance — precision/recall, budgeting for spread</span></div>
+              <div class="r"><span class="bullet">06</span><span>Beyond the answer — quality, trajectory, search</span></div>
+              <div class="r"><span class="bullet">07</span><span>Experiments + multi-axis evaluation + takeaways</span></div>
+            </div>
+            <div class="axis-chips">
+              <div class="axis-chip">destination</div>
+              <div class="axis-chip">quality</div>
+              <div class="axis-chip">path</div>
+              <div class="axis-chip">search</div>
+            </div>
+          </div>
+          <aside class="notes">Eleven beats condensed to seven stops. Center of gravity: the oracle and the judge — that's where the transferable engineering lives. The spine: a number is noise until you build the thing that turns it into signal, and "good" is a vector, not a scalar.</aside>
+        </section>
+
+        <!-- ===== S3 — Meet the agent ===== -->
+        <section class="slide" id="s3" data-kicker="Setup">
+          <div class="scene">
+            <div class="kicker">Setup</div>
+            <div class="scene-h display">An AI that hacks on its own</div>
+            <div class="flow">
+              <div class="pill r">authenticate</div>
+              <span class="arrow">→</span>
+              <div class="pill r">assess<span class="sub">reflect ×N</span></div>
+              <span class="arrow">→</span>
+              <div class="pill r">dedup</div>
+              <span class="arrow">→</span>
+              <div class="pill r alt">report</div>
+            </div>
+            <div class="flow-note">Given a target + credentials + scope, the agent runs the loop <b>genuinely autonomously</b> — no human driving exploitation. (For this room: a "pentest" = probing an app for security bugs.) The loop's internal structure becomes data when we score the <b>path</b>, not just the answer.</div>
+          </div>
+          <aside class="notes">Keep it short — this is setup, not the point. Refer to it as "the agent" throughout. The detail that matters later: the loop has internal structure (reflection rounds), which becomes data when we score the path, not just the answer.</aside>
+        </section>
+
+        <!-- ===== S4 — No truth value ===== -->
+        <section class="slide" id="s4" data-kicker="The problem">
+          <div class="scene">
+            <div class="kicker">The problem</div>
+            <div class="scene-h display">"It found 12 vulnerabilities" is a sentence with no truth value</div>
+            <div class="report-card r">
+              <div class="rh2">candidate report</div>
+              <div class="big">12<span class="il">illustrative</span></div>
+              <div class="fline"><span class="q">?</span> findings reported — none checked against anything</div>
+              <div class="fline"><span class="q">?</span> no baseline, no answer key by default</div>
+            </div>
+            <div class="soblock display">…so what?</div>
+            <div class="rstack" style="left:1080px;top:330px;max-width:680px">
+              <div class="r"><span class="bullet">▹</span><span>Twelve compared to <em>what?</em></span></div>
+              <div class="r"><span class="bullet">▹</span><span>Are they <em>real?</em></span></div>
+              <div class="r"><span class="bullet">▹</span><span>Are they <em>complete?</em></span></div>
+              <div class="r"><span class="bullet">▹</span><span>Did it <span class="amx">miss the one that mattered?</span></span></div>
+            </div>
+          </div>
+          <aside class="notes">Cold open, before any framing: "It found twelve vulnerabilities — and it's worthless. Twelve compared to what? Are they real? Did it miss the one that mattered?" The number alone is noise; you need an oracle to turn it into signal. The rest of the talk builds that oracle.</aside>
+        </section>
+
+        <!-- ===== S5 — Three reasons ===== -->
+        <section class="slide" id="s5" data-kicker="Why it's hard">
+          <div class="scene">
+            <div class="kicker">Why it's hard</div>
+            <div class="scene-h display">Three reasons</div>
+            <div class="reasons">
+              <div class="reason r">
+                <div class="rn">a · no answer key</div>
+                <div class="rt">Real apps don't ship a list of their own bugs</div>
+                <div class="rd">There's nothing to check the report against — by default.</div>
+              </div>
+              <div class="reason r">
+                <div class="rn">b · non-determinism</div>
+                <div class="rt">Same agent, same config — different findings</div>
+                <div class="rd">One run is a sample of size one. Your output distribution is the object of study.</div>
+              </div>
+              <div class="reason r">
+                <div class="rn">c · over-reporting</div>
+                <div class="rt">The dominant failure mode</div>
+                <div class="csp"><span class="struck-txt">"missing Content-Security-Policy header"</span><br /><span class="stamp">CSP was enabled here</span></div>
+              </div>
+            </div>
+            <div class="var-note" style="bottom:150px">Punch line: <em>evaluation</em>, not capability, is the bottleneck.</div>
+          </div>
+          <aside class="notes">This slide maps the whole talk — three problems, and the rest is how we attack each. Land the CSP example: it wasn't wrong by accident, it confidently recited a checklist the app already satisfied. For an ML room, frame (b) as: never trust a point estimate.</aside>
+        </section>
+
+        <!-- ===== S6 — Ground truth as code (editor) ===== -->
+        <section class="slide" id="s6" data-kicker="The data foundation">
+          <div class="scene">
+            <div class="kicker">The data foundation</div>
+            <div class="scene-h display" style="position:absolute;left:150px;top:172px">Ground truth as <span class="ac">code</span></div>
+            <div class="editor">
+              <div class="editor-head"><span class="path">benchmarks / grafana / labels.json</span><span>versioned · reviewed in PRs</span></div>
+              <div class="code">
+                <div class="ln"><span class="gutter">1</span><span><span class="punc">{</span></span></div>
+                <div class="ln"><span class="gutter">2</span><span><span class="k-cyan">"positives"</span><span class="punc">: [</span>  <span class="punc">//</span> <span class="str">known CVEs</span></span></div>
+                <div class="ln"><span class="gutter">3</span><span>&nbsp;&nbsp;<span class="punc">{</span> <span class="str">"id"</span><span class="punc">:</span> <span class="str">"CVE-2025-3260"</span> <span class="punc">},</span></span></div>
+                <div class="ln"><span class="gutter">4</span><span>&nbsp;&nbsp;<span class="punc">{</span> <span class="str">"id"</span><span class="punc">:</span> <span class="str">"CVE-2025-4123"</span> <span class="punc">}</span></span></div>
+                <div class="ln"><span class="gutter">5</span><span><span class="punc">],</span></span></div>
+                <div class="ln" id="s6-neg"><span class="gutter">6</span><span><span class="k-amber">"negatives"</span><span class="punc">: [</span> <span class="str">"anonymous access"</span> <span class="punc">]</span><span class="trap-tag">hard negative</span></span></div>
+                <div class="ln"><span class="gutter">7</span><span><span class="punc">}</span></span></div>
+              </div>
+            </div>
+            <div class="s3-side">
+              <div class="lbl"><span class="c">positives</span> — known CVEs really present</div>
+              <div class="lbl"><span class="a">negatives</span> — what a confident agent over-claims</div>
+              <div class="note">Preconditions live inside the label and are created by a seed step — so a label is verifiable against a live target.</div>
+            </div>
+          </div>
+          <aside class="notes">Expand "CVE" on first use: a public catalogue ID for a documented bug. A label isn't a string to grep for — it's a claim about a specific live target, with the state it depends on created on purpose. That's what makes a fuzzy LLM judge consistent without brittle string matching.</aside>
+        </section>
+
+        <!-- ===== S7 — Positive + over-claim negative ===== -->
+        <section class="slide" id="s7" data-kicker="Example">
+          <div class="scene">
+            <div class="kicker">Example</div>
+            <div class="scene-h display" style="position:absolute;left:150px;top:172px">A real positive — and an over-claim negative</div>
+            <div class="codecards" style="top:340px">
+              <div class="ccard pos r">
+                <div class="cchead">positive · credit this</div>
+                <div class="ccbody"><span class="punc">{</span> <span class="k-cyan">"name"</span><span class="punc">:</span> <span class="str">"CVE-2025-3260"</span><span class="punc">,</span> <span class="k-cyan">"severity"</span><span class="punc">:</span> <span class="str">"high"</span> <span class="punc">}</span><br /><span class="str">Broken authorization / IDOR — a Viewer can read any dashboard. Org isolation and datasource access are NOT bypassed.</span></div>
+              </div>
+              <div class="ccard neg r">
+                <div class="cchead">negative · penalize this (over-claim)</div>
+                <div class="ccbody"><span class="punc">{</span> <span class="k-amber">"name"</span><span class="punc">:</span> <span class="str">"CVE-2025-3260 grants datasource / cross-org access"</span> <span class="punc">}</span><br /><span class="str">Claiming the IDOR exposes datasource creds or breaks org isolation over-states impact.</span><div class="redirect">→ that belongs to <b>CVE-2025-3454</b>, not here.</div></div>
+              </div>
+            </div>
+          </div>
+          <aside class="notes">The "AI was right and still wrong" beat. CVE-2025-3260 lets a low-privilege user read dashboards — but it does NOT expose datasource creds or break org isolation. A report claiming it does over-states impact; the label says that belongs to CVE-2025-3454. Over-claiming is a scored failure.</aside>
+        </section>
+
+        <!-- ===== S8 — Hard negatives ===== -->
+        <section class="slide" id="s8" data-kicker="Hard negatives">
+          <div class="scene">
+            <div class="kicker">Hard negatives</div>
+            <div class="scene-h display">Label what isn't there</div>
+            <div class="cols">
+              <div class="col r">
+                <div class="colh">misconfig traps</div>
+                <div class="ci">default admin/admin — <span class="ok">password was changed here</span></div>
+                <div class="ci">missing-CSP — <span class="ok">CSP enabled here</span></div>
+                <div class="ci">anonymous access — <span class="ok">not present here</span></div>
+              </div>
+              <div class="col r">
+                <div class="colh amh">over-claim traps</div>
+                <div class="ci">right bug, <span class="no">wrong blast radius</span></div>
+                <div class="ci">the CVE-2025-3260 datasource over-claim</div>
+                <div class="ci">staying silent scores as a <span class="ok">true negative</span></div>
+              </div>
+            </div>
+            <div class="sev-note">Severity per label: a deliberately <span class="low">low-severity real bug (CVE-2025-1088)</span> should NOT move the score. Honest note: only <b>Grafana</b> has a complete labels.json — <b>8 positives / 4 negatives</b>; ground-truth maturity varies across the five targets.</div>
+          </div>
+          <aside class="notes">Negatives are the transferable craft: you don't score a classifier on true positives alone, and you shouldn't score an agent that way either. CSP and admin/admin are real entries. Be honest about maturity — Grafana is the gold standard; the others are partial. Don't oversell the suite.</aside>
+        </section>
+
+        <!-- ===== S9 — Application coverage (targets) ===== -->
+        <section class="slide" id="s9" data-kicker="Application coverage">
+          <div class="scene">
+            <div class="kicker">Application coverage</div>
+            <div class="scene-h display" style="position:absolute;left:150px;top:172px">Five app classes, one harness</div>
+            <div class="targets">
+              <div class="tcard r"><div class="tname"><b>dashboards</b></div><div class="tver">pinned + seeded</div><div class="tline"><i></i></div></div>
+              <div class="tcard r"><div class="tname"><b>git forge</b></div><div class="tver">pinned + seeded</div><div class="tline"><i></i></div></div>
+              <div class="tcard r"><div class="tname"><b>cloud storage</b></div><div class="tver">pinned + seeded</div><div class="tline"><i></i></div></div>
+              <div class="tcard r"><div class="tname"><b>link manager</b></div><div class="tver">pinned + seeded</div><div class="tline"><i></i></div></div>
+              <div class="tcard r"><div class="tname"><b>CRM</b></div><div class="tver">pinned + seeded</div><div class="tline"><i></i></div></div>
+            </div>
+            <div class="meta-foot">Five different classes of app — measuring generalization, not overfitting one target · diverse · versioned · reproducible</div>
+          </div>
+          <aside class="notes">This is your train/test discipline: benchmark one target and you measure memorization, not capability. Five diverse, versioned, reproducible apps let you ask "does the agent generalize?" Keep it to diversity + reproducibility — no deployment machinery.</aside>
+        </section>
+
+        <!-- ===== S10 — Manual scoring -> LLM judge ===== -->
+        <section class="slide" id="s10" data-kicker="Scale">
+          <div class="scene">
+            <div class="kicker">Scale</div>
+            <div class="scene-h display">Manual scoring doesn't scale → LLM-as-judge</div>
+            <div class="flow" style="top:340px">
+              <div class="pill r">report + labels</div>
+              <span class="arrow">→</span>
+              <div class="pill r" style="border-color:var(--cyan)">judge<span class="sub">an Opus-class model</span></div>
+              <span class="arrow">→</span>
+              <div class="pill r">per-label scorecard</div>
+            </div>
+            <div class="rstack" style="top:520px">
+              <div class="r"><span class="bullet">▹</span><span>Reading every report by hand against the labels is the bottleneck — and there are dozens of non-deterministic runs per config.</span></div>
+              <div class="r"><span class="bullet">▹</span><span>But why trust a second model to grade the first?</span></div>
+              <div class="r"><span class="bullet">▹</span><span>Next: make it <em>trustworthy AND cheap.</em></span></div>
+            </div>
+          </div>
+          <aside class="notes">The honest tension: an LLM judge can be wrong in exactly the ways the agent is wrong. The answer isn't "trust it" — it's "constrain it, take away what it's bad at, and bound its cost." A general recipe for LLM-as-judge anywhere.</aside>
+        </section>
+
+        <!-- ===== S11 — Judge A & B ===== -->
+        <section class="slide" id="s11" data-kicker="The judge · A &amp; B">
+          <div class="scene">
+            <div class="kicker">The judge · A &amp; B</div>
+            <div class="scene-h display" style="position:absolute;left:150px;top:172px">Shape the output. <span class="ac">Don't let it count.</span></div>
+            <div class="jpanel p-left">
+              <div class="panel-h">A · shape the output</div>
+              <div class="frow"><span class="fdot" style="background:var(--cyan)"></span><span class="fname">decouple from format</span><span class="fstat">md / json / transcript</span></div>
+              <div class="frow"><span class="fdot" style="background:var(--cyan)"></span><span class="fname">labels-parameterized schema</span><span class="fstat">locked</span></div>
+              <div class="frow silent"><span class="fdot" style="background:var(--amber)"></span><span class="fname">~1024-token default truncates JSON</span><span class="fstat" style="color:var(--amber)">force a high cap</span></div>
+              <div style="margin-top:18px;font-size:22px;color:var(--dim)">"the transport was the bug"</div>
+            </div>
+            <div class="jpanel p-right">
+              <div class="panel-h">B · counts in code</div>
+              <div class="codeline struck">model.count() <span style="color:var(--red)">✗</span><span class="strike-bar"></span></div>
+              <div class="codeline" style="color:var(--cyan)">derive_counts(labels) ✓</div>
+              <div class="counter-row" style="margin-top:24px"><span style="color:var(--dim)">classified perfectly</span><span class="cval">10</span></div>
+              <div class="counter-row"><span style="color:var(--dim)">miscounted total by</span><span class="cval" style="color:var(--amber)">1</span></div>
+              <div class="jchip">we took the calculator away</div>
+            </div>
+          </div>
+          <aside class="notes">On (B): the model classifies; code does the math. Counts are 100% derivable from the arrays, so we make them unfalsifiable. On the token cap: a judgement runs into the high thousands of tokens; the ~1024 default truncates mid-JSON — the transport was the bug. Both are general LLM-pipeline lessons.</aside>
+        </section>
+
+        <!-- ===== S12 — Judge C & D ===== -->
+        <section class="slide" id="s12" data-kicker="The judge · C &amp; D">
+          <div class="scene">
+            <div class="kicker">The judge · C &amp; D</div>
+            <div class="scene-h display" style="position:absolute;left:150px;top:172px">One bounded repair. A severity asymmetry.</div>
+            <div class="repair">
+              <div class="rstep r"><span class="rdot"></span><span class="rlabel">invoke</span><span class="rmeta">call 1</span></div>
+              <div class="rstep r"><span class="rdot"></span><span class="rlabel">validate cross-array invariants</span><span class="rmeta">in code</span></div>
+              <div class="rstep r"><span class="rdot"></span><span class="rlabel">re-prompt with error list — once</span><span class="rmeta">call 2</span></div>
+              <div class="rstep r"><span class="rdot rstop"></span><span class="rlabel">else stop</span><span class="rmeta">no third try</span></div>
+              <div class="worst">worst case = <b style="color:var(--cyan)">2 calls</b></div>
+            </div>
+            <div class="asym">
+              <div class="ah">D · severity asymmetry</div>
+              <div class="arow r"><span class="g">gate</span><span>low/info OUT of the false-positive side (filters noise)</span></div>
+              <div class="arow r"><span class="keep">keep</span><span>positive matching IGNORES severity — gating never costs recall</span></div>
+              <div class="arow r"><span class="keep">keep</span><span>negatives scored as true negatives — restraint is in the math</span></div>
+            </div>
+          </div>
+          <aside class="notes">(C): one shot, one repair, then stop — if the model can't fix violations with the error list in front of it, a third try won't help. Bounded cost is the point. (D): gating only ever shrinks the false-positive side, so you never punish recall for noise the judge already filtered. The asymmetry is deliberate.</aside>
+        </section>
+
+        <!-- ===== S13 — Confusion matrix ===== -->
+        <section class="slide" id="s13" data-kicker="The metric">
+          <div class="scene">
+            <div class="kicker">The metric</div>
+            <div class="scene-h display" style="position:absolute;left:150px;top:172px">Precision &amp; recall</div>
+            <div class="cm">
+              <div class="h"></div><div class="h">agent reported</div><div class="h">agent silent</div>
+              <div class="rh">in ground truth</div>
+              <div class="cell tp"><div class="ct">TP</div><div class="cl">caught</div></div>
+              <div class="cell fn"><div class="ct">FN</div><div class="cl">missed</div></div>
+              <div class="rh">not real</div>
+              <div class="cell fp"><div class="ct">FP</div><div class="cl">over-claim</div></div>
+              <div class="cell tn"><div class="ct">TN</div><div class="cl">restraint</div></div>
+            </div>
+            <div class="pr-formulas">
+              <div class="formula"><span class="lab">recall</span> = TP / (TP + <span class="den">FN</span>)<span class="small">of the real bugs, how many were caught</span></div>
+              <div class="formula"><span class="lab">precision</span> = TP / (TP + <span class="amden">FP</span>)<span class="small">over-claims are penalized, not free</span></div>
+              <div class="formula" style="font-size:24px">denominator = 0 → <span class="lab">None</span>, not a fake 0<span class="small">a fake zero pollutes every average downstream</span></div>
+            </div>
+          </div>
+          <aside class="notes">Standard ML vocabulary, which is why it lands. Two design notes: counts come from code (callback to "we took the calculator away"), and a 0-denominator returns null, not 0 — a fake zero is a lie that pollutes every average downstream. Any cell values are illustrative.</aside>
+        </section>
+
+        <!-- ===== S14 — Variance ===== -->
+        <section class="slide" id="s14" data-kicker="Variance">
+          <div class="scene">
+            <div class="kicker">Variance</div>
+            <div class="scene-h display">The variance IS the data</div>
+            <div class="dotplot">
+              <div class="dp-axis"></div>
+              <div class="dp-mark minmax" style="left:14%"><span class="ml">min</span></div>
+              <div class="dp-mark mean" style="left:50%"><span class="ml">mean</span></div>
+              <div class="dp-mark minmax" style="left:84%"><span class="ml">max</span></div>
+              <div class="dp-dot" style="left:14%;top:48%"></div>
+              <div class="dp-dot" style="left:28%;top:40%"></div>
+              <div class="dp-dot" style="left:40%;top:52%"></div>
+              <div class="dp-dot" style="left:50%;top:36%"></div>
+              <div class="dp-dot" style="left:58%;top:46%"></div>
+              <div class="dp-dot" style="left:70%;top:38%"></div>
+              <div class="dp-dot" style="left:84%;top:50%"></div>
+              <div class="dp-label" style="left:0%">low recall</div>
+              <div class="dp-label" style="left:100%">high recall</div>
+            </div>
+            <div class="pooled">
+              <div class="pbox">pooled across runs<span class="strike-bar"></span></div>
+              <div class="pnote">A chatty run can't dominate when recall is averaged <b>per-run, then across runs.</b></div>
+            </div>
+            <div class="var-note">One run is a sample of size one — report a <em>range</em>, not a point estimate. <span class="il">illustrative</span></div>
+          </div>
+          <aside class="notes">The methodological heart for an ML audience. Pooling all findings across runs lets one verbose run swamp the signal; per-run-then-across-runs keeps each run as one vote. The spread between min and max isn't noise to average away — it's a measurement of reliability. The variance is the data.</aside>
+        </section>
+
+        <!-- ===== S15 — Artifact quality (rubric) ===== -->
+        <section class="slide" id="s15" data-kicker="Artifact quality">
+          <div class="scene">
+            <div class="kicker">Artifact quality</div>
+            <div class="scene-h display" style="position:absolute;left:150px;top:172px">A right answer, <span class="ac">badly argued</span>, still fails</div>
+            <div class="rubric">
+              <div class="rcrit"><span class="mark ok">✓</span><span class="rtext">evidence attached — request / response, not a claim</span></div>
+              <div class="rcrit"><span class="mark ok">✓</span><span class="rtext">reproducible steps — someone else can re-trigger it</span></div>
+              <div class="rcrit"><span class="mark part">~</span><span class="rtext">severity justified against real impact</span></div>
+              <div class="rcrit"><span class="mark ok">✓</span><span class="rtext">no hallucinated detail</span></div>
+            </div>
+            <div class="rubric-side">Graded against a <b>rubric</b> — a distinct measurement axis: the report's quality, not just match / no-match.</div>
+          </div>
+          <aside class="notes">Matching ground truth tells you whether it found the bug; the rubric tells you whether the report is usable. A correct finding with a fabricated proof-of-concept is worse than useless — it erodes trust. A separate reference (a rubric) measuring a separate thing (artifact quality).</aside>
+        </section>
+
+        <!-- ===== S16 — Trajectory: outcome != process ===== -->
+        <section class="slide" id="s16" data-kicker="Trajectory · outcome ≠ process">
+          <div class="scene">
+            <div class="kicker">Trajectory · outcome ≠ process</div>
+            <div class="scene-h display">Score the <span class="ac">path</span>, not just the answer</div>
+            <div class="paths">
+              <div class="pathrow r">
+                <div class="pr-h">run A — reasoned its way there</div>
+                <div class="pr-flow"><span class="pp">authenticate</span><span class="pa">→</span><span class="pp">assess</span><span class="pa">→</span><span class="pp">reflect</span><span class="pa">→</span><span class="pp win">same finding</span></div>
+              </div>
+              <div class="pathrow r">
+                <div class="pr-h">run B — stumbled into it</div>
+                <div class="pr-flow"><span class="pp">authenticate</span><span class="pa">→</span><span class="pp">assess</span><span class="pa">→</span><span class="pp win">same finding</span></div>
+              </div>
+            </div>
+            <div class="rstack" style="top:660px;max-width:1500px">
+              <div class="r"><span class="bullet">▹</span><span>Did it <em>reason</em> its way to the finding — or stumble in?</span></div>
+              <div class="r"><span class="bullet">▹</span><span>Soundness, efficiency (tokens / cost), and whether reflection actually helped — all measurable from the trajectory.</span></div>
+            </div>
+          </div>
+          <aside class="notes">Frame as reasoning-path data, not observability infrastructure. The agent emits its own per-phase metadata, so we can ask whether reflection rounds changed the conclusion or just burned tokens. Stumbling into the right answer isn't the same as reasoning to it — and only the second kind reproduces.</aside>
+        </section>
+
+        <!-- ===== S17 — Trajectory decomposed (tree) ===== -->
+        <section class="slide" id="s17" data-kicker="Trajectory, decomposed">
+          <div class="scene">
+            <div class="kicker">A trajectory, decomposed</div>
+            <div class="scene-h display" style="position:absolute;left:150px;top:172px">authenticate → assess → dedup</div>
+            <div class="tree">
+              <div class="tnode"><span class="nname root">veevee/assess</span></div>
+              <div class="tnode"><span class="branch">├─</span><span class="nname">auth_config_render</span><span class="tag tool">tool</span></div>
+              <div class="tnode"><span class="branch">├─</span><span class="nname">main</span><span class="tag llm">llm</span></div>
+              <div class="tnode"><span class="branch">├─</span><span class="nname">reflect_1_analyze</span><span class="tag reflect">reflect</span></div>
+              <div class="tnode"><span class="branch">├─</span><span class="nname">reflect_1_resume</span><span class="tag llm">llm</span></div>
+              <div class="tnode"><span class="branch">└─</span><span class="nname">reflect_2_analyze</span><span class="tag reflect">reflect</span></div>
+            </div>
+            <div class="traj-side">
+              <div class="traj-stat"><div class="sl">tokens</div><div class="sv" id="traj-tok">0</div></div>
+              <div class="traj-stat"><div class="sl">llm calls</div><div class="sv" id="traj-calls">0</div></div>
+              <div class="traj-stat"><div class="sl">cost / run</div><div class="sv">tracked</div></div>
+            </div>
+            <div class="traj-punch">Per-call metadata — kind, phase, target, version, model, effort. <em>Names real, counts illustrative.</em></div>
+          </div>
+          <aside class="notes">Walk one branch: authenticate → assess:main → reflect_1_analyze → reflect_1_resume → reflect_2_analyze → dedup. Each node carries metadata and a token tally. The reflection rounds are the interesting part — you can measure, per run, whether reflect_2 changed anything. Names real, numbers illustrative.</aside>
+        </section>
+
+        <!-- ===== S18 — Coverage (surface) ===== -->
+        <section class="slide" id="s18" data-kicker="Coverage · search completeness">
+          <div class="scene">
+            <div class="kicker">Coverage · search completeness</div>
+            <div class="scene-h display" style="position:absolute;left:150px;top:172px">Did it look, or get lucky?</div>
+            <div class="surface">
+              <div class="scell hit"><span class="dot"></span>auth</div>
+              <div class="scell hit"><span class="dot"></span>dashboards</div>
+              <div class="scell hit"><span class="dot"></span>datasources</div>
+              <div class="scell hit"><span class="dot"></span>api / admin</div>
+              <div class="scell miss"><span class="dot"></span>plugins</div>
+              <div class="scell miss"><span class="dot"></span>annotations</div>
+            </div>
+            <div class="cov-side">A deterministic check — <b>no LLM</b> — against the surface spec. High recall + <b>low coverage</b> = warning sign: it found bugs but didn't really look around.</div>
+          </div>
+          <aside class="notes">The cheapest, most underrated axis, and a pure code check — no model in the loop, so it's free and exact. Recall alone can flatter a lucky run: if the agent found three bugs but never touched the datasource API, you know it got lucky, not that it's good. Coverage catches that.</aside>
+        </section>
+
+        <!-- ===== S19 — Comparative experiments (matrix) ===== -->
+        <section class="slide" id="s19" data-kicker="Comparative experiments">
+          <div class="scene">
+            <div class="kicker">Comparative experiments</div>
+            <div class="scene-h display" style="position:absolute;left:150px;top:172px">Hold the benchmark fixed. <span class="ac">Vary one thing.</span></div>
+            <div class="matrix">
+              <div class="mh"></div><div class="mh">low</div><div class="mh">medium</div><div class="mh">high</div><div class="mh">xhigh</div><div class="mh">max</div>
+              <div class="mr">opus</div>
+              <div class="mcell"><i data-fill="0.35"></i></div><div class="mcell"><i data-fill="0.55"></i></div><div class="mcell"><i data-fill="0.72"></i></div><div class="mcell"><i data-fill="0.8"></i></div><div class="mcell"><i data-fill="0.85"></i></div>
+              <div class="mr">sonnet</div>
+              <div class="mcell"><i data-fill="0.3"></i></div><div class="mcell"><i data-fill="0.42"></i></div><div class="mcell"><i data-fill="0.5"></i></div><div class="mcell"><i data-fill="0.55"></i></div><div class="mcell"><i data-fill="0.58"></i></div>
+            </div>
+            <div class="exp-side">model × effort × <b>repeated seeds</b> → measure variance, ablate what actually moves the metric. <span class="il">illustrative — no measured result</span></div>
+          </div>
+          <aside class="notes">It's ablation applied to an agent: change one variable, repeat the seed until the variance band is real (callback to Slide 14), and only claim an effect when it clears that band. "effort=max felt better" is an anecdote; "max beats high beyond the per-seed variance" is a result. No measured result claimed.</aside>
+        </section>
+
+        <!-- ===== S20 — Multi-axis (axes) ===== -->
+        <section class="slide" id="s20" data-kicker="Multi-axis evaluation">
+          <div class="scene">
+            <div class="kicker">Multi-axis evaluation</div>
+            <div class="scene-h display" style="position:absolute;left:150px;top:172px">"Is it good?" isn't one number</div>
+            <div class="axes">
+              <div class="axis"><div class="an">destination</div><div class="at">found vs ground truth</div><div class="ad">precision · recall</div></div>
+              <div class="axis"><div class="an">quality</div><div class="at">is the finding well-argued</div><div class="ad">rubric score</div></div>
+              <div class="axis"><div class="an">path</div><div class="at">how it reasoned there</div><div class="ad">trajectory</div></div>
+              <div class="axis"><div class="an">search</div><div class="at">how much it explored</div><div class="ad">coverage</div></div>
+            </div>
+            <div class="axes-punch">Four references, four measurements — none privileged. Same headline number, different agent.</div>
+          </div>
+          <aside class="notes">The thesis. No reference is privileged — you measure against whatever each question needs: ground truth, a rubric, a surface spec, or the trajectory itself. Collapsing them to one scalar throws away the trade-offs that tell you whether to ship. Four questions, four references — not a framework.</aside>
+        </section>
+
+        <!-- ===== S21 — Takeaways ===== -->
+        <section class="slide" id="s21" data-kicker="Takeaways">
+          <div class="scene">
+            <div class="kicker">Takeaways</div>
+            <div class="scene-h display">Five transferable lessons</div>
+            <div class="takes">
+              <div class="take r"><span class="tnum">1</span><span>A number with no answer key is <em>noise</em> — build the oracle first.</span></div>
+              <div class="take r"><span class="tnum">2</span><span>Ground truth is <em>code</em> — label what should NOT happen.</span></div>
+              <div class="take r"><span class="tnum">3</span><span>With an LLM judge, take away what it's <em>bad at</em> — don't let it count.</span></div>
+              <div class="take r"><span class="tnum">4</span><span>Measure <em>variance</em>, not a point — one run is a sample of size one.</span></div>
+              <div class="take r"><span class="tnum">5</span><span>"Good" is <em>multi-axis</em> — measure the vector, not the headline number.</span></div>
+            </div>
+          </div>
+          <aside class="notes">These transfer to anyone evaluating non-deterministic agents on messy real-world tasks — the security agent was only the case study. Each maps to a section. Pause on (2) and (4) — the two the room is most likely to underestimate going in.</aside>
+        </section>
+
+        <!-- ===== S22 — Close + Q&A ===== -->
+        <section class="slide centered" id="s22" data-kicker="Close · Q&amp;A">
+          <div class="scene">
+            <div class="kicker">Close</div>
+            <div class="title-h display">Benchmarking the <span class="ac">AI Hacker</span></div>
+            <div class="deck-underline"></div>
+            <div class="title-sub">The next time something hands you "it found twelve" — that's not an answer. It's the question.</div>
+            <div class="axis-row">
+              <div class="arc">destination</div><div class="arc">quality</div><div class="arc">path</div><div class="arc">search</div>
+            </div>
+            <div class="title-sub dim" style="margin-top:36px;font-size:34px">Q&amp;A</div>
+            <div class="title-brand"><span class="by">by</span><img src="assets/novee-logo-light.png" alt="Novee" /></div>
+          </div>
+          <aside class="notes">Deliver the close verbatim, then open the floor. Anticipate: keeping labels honest as targets patch (versioned, code-reviewed labels with preconditions); isn't the judge as fallible as the agent (yes — that's why we take away counting, constrain output, bound repair); picking the seed count (until the per-seed variance band is stable).</aside>
+        </section>
+
+      </div>
+    </div>
+
+    <div id="overlay">
+      <div id="notes"><div class="nh">speaker note</div><div id="notes-body"></div></div>
+      <div id="hint">→/space/PgDn next · click next · right-click prev · F fullscreen · N notes · ? help</div>
+      <div id="help">
+        <h3>keyboard</h3>
+        <div><kbd>→ ↓ space ⏎</kbd> next slide</div>
+        <div><kbd>← ↑ ⌫</kbd> previous slide</div>
+        <div><kbd>PgDn / PgUp</kbd> next / prev (clicker)</div>
+        <div><kbd>click</kbd> next · <kbd>right-click</kbd> prev</div>
+        <div><kbd>Home / End</kbd> first / last</div>
+        <div><kbd>F</kbd> fullscreen</div>
+        <div><kbd>N / S</kbd> toggle speaker notes</div>
+        <div><kbd>? / H</kbd> toggle this help</div>
+      </div>
+    </div>
+
+    <script>
+      "use strict";
+
+      /* ---------- scale-to-fit ---------- */
+      const stage = document.getElementById("stage");
+      function fit() {
+        const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+        stage.style.transform = "translate(-50%,-50%) scale(" + s + ")";
+      }
+      window.addEventListener("resize", fit);
+
+      /* ---------- nav state ---------- */
+      const STILL = /[?&]still/.test(location.search);  /* ?still snaps animations to final frame (print / screenshot) */
+      const slides = [...document.querySelectorAll(".slide")];
+      const N = slides.length;
+      let i = 0;
+      let curTL = null;
+
+      /* ---------- count-up helper ---------- */
+      function countUp(tl, target, to, at) {
+        const el = document.getElementById(target);
+        if (!el) return;
+        const obj = { v: 0 };
+        tl.to(obj, {
+          v: to,
+          duration: 1.2,
+          ease: "power1.out",
+          onUpdate: () => { el.textContent = Math.round(obj.v).toLocaleString(); },
+        }, at);
+      }
+
+      /* ---------- per-slide special motion ---------- */
+      const SPECIAL = {
+        s1(q, tl) {
+          tl.fromTo(q(".deck-underline"), { scaleX: 0 }, { scaleX: 1, duration: 0.6, ease: "power3.inOut" }, 0.5);
+          tl.fromTo(q(".title-sub"), { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.5 }, 0.7);
+          tl.fromTo(q(".title-brand"), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5 }, 0.95);
+        },
+        s2(q, tl) {
+          tl.fromTo(q(".axis-chip"), { opacity: 0, x: 18 }, { opacity: 0.55, x: 0, stagger: 0.1, duration: 0.4 }, 0.3);
+        },
+        s3(q, tl) {
+          tl.fromTo(q(".arrow"), { opacity: 0 }, { opacity: 1, stagger: 0.12, duration: 0.3 }, "<0.1");
+          tl.fromTo(q(".flow-note"), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5 }, ">-0.1");
+        },
+        s4(q, tl) {
+          tl.fromTo(q(".soblock"), { opacity: 0, scale: 1.3 }, { opacity: 0.35, scale: 1, duration: 0.6, ease: "power2.out" }, 0.5);
+        },
+        s5(q, tl) {
+          tl.fromTo(q(".reason .stamp"), { opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(2)" }, ">");
+        },
+        s6(q, tl) {
+          tl.fromTo(q(".ln"), { opacity: 0, x: -20 }, { opacity: 1, x: 0, stagger: 0.1, duration: 0.3, ease: "power2.out" }, "<0.05");
+          tl.fromTo(q(".trap-tag"), { opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(2)" }, ">");
+          tl.fromTo(q(".s3-side .lbl, .s3-side .note"), { opacity: 0, x: 24 }, { opacity: 1, x: 0, stagger: 0.14, duration: 0.4 }, "<");
+        },
+        s9(q, tl) {
+          tl.fromTo(q(".tline > i"), { scaleX: 0 }, { scaleX: 0.9, duration: 1.0, stagger: 0.14, ease: "power1.inOut" }, "<0.1");
+          tl.fromTo(q(".meta-foot"), { opacity: 0 }, { opacity: 1, duration: 0.5 }, ">-0.4");
+        },
+        s10(q, tl) {
+          tl.fromTo(q(".arrow"), { opacity: 0 }, { opacity: 1, stagger: 0.14, duration: 0.3 }, "<0.1");
+        },
+        s11(q, tl) {
+          tl.fromTo(q(".jpanel"), { opacity: 0, y: 24 }, { opacity: 1, y: 0, stagger: 0.12, duration: 0.45, ease: "power3.out" }, "<0.05");
+          tl.fromTo(q(".frow"), { opacity: 0, x: -16 }, { opacity: 1, x: 0, stagger: 0.12, duration: 0.3 }, ">-0.2");
+          tl.fromTo(q(".strike-bar"), { scaleX: 0 }, { scaleX: 1, duration: 0.45, ease: "power2.inOut" }, ">");
+        },
+        s12(q, tl) {
+          tl.fromTo(q(".rstep"), { opacity: 0, x: -22 }, { opacity: 1, x: 0, stagger: 0.16, duration: 0.34 }, "<0.05");
+          tl.fromTo(q(".worst"), { opacity: 0 }, { opacity: 1, duration: 0.4 }, ">");
+          tl.fromTo(q(".arow"), { opacity: 0, x: 22 }, { opacity: 1, x: 0, stagger: 0.16, duration: 0.34 }, "<0.4");
+        },
+        s13(q, tl) {
+          tl.fromTo(q(".cell"), { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, stagger: 0.12, ease: "back.out(1.5)", duration: 0.4 }, "<0.1");
+          tl.fromTo(q(".formula"), { opacity: 0, x: 26 }, { opacity: 1, x: 0, stagger: 0.18, duration: 0.45 }, ">-0.2");
+        },
+        s14(q, tl) {
+          tl.fromTo(q(".dp-mark"), { opacity: 0 }, { opacity: 1, stagger: 0.1, duration: 0.4 }, "<0.1");
+          tl.fromTo(q(".dp-dot"), { opacity: 0, scale: 0 }, { opacity: 0.85, scale: 1, stagger: 0.08, ease: "back.out(2)", duration: 0.4 }, ">-0.2");
+          tl.fromTo(q(".pooled .strike-bar"), { scaleX: 0 }, { scaleX: 1, duration: 0.45, ease: "power2.inOut" }, ">");
+          tl.fromTo(q(".var-note"), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5 }, ">-0.1");
+        },
+        s15(q, tl) {
+          tl.fromTo(q(".rcrit"), { opacity: 0, x: -24 }, { opacity: 1, x: 0, stagger: 0.18, duration: 0.36 }, "<0.05");
+          tl.fromTo(q(".rcrit .mark"), { scale: 0 }, { scale: 1, stagger: 0.18, ease: "back.out(2.4)", duration: 0.34 }, "<0.1");
+          tl.fromTo(q(".rubric-side"), { opacity: 0, x: 24 }, { opacity: 1, x: 0, duration: 0.5 }, ">-0.3");
+        },
+        s16(q, tl) {
+          tl.fromTo(q(".pp"), { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, stagger: 0.08, ease: "back.out(1.5)", duration: 0.3 }, "<0.1");
+        },
+        s17(q, tl) {
+          tl.fromTo(q(".tnode"), { opacity: 0, x: -20 }, { opacity: 1, x: 0, stagger: 0.1, duration: 0.34 }, "<");
+          tl.fromTo(q(".traj-stat"), { opacity: 0, x: 26 }, { opacity: 1, x: 0, stagger: 0.16, duration: 0.4 }, "<0.2");
+          countUp(tl, "traj-tok", 48120, ">-0.2");
+          countUp(tl, "traj-calls", 23, "<");
+          tl.fromTo(q(".traj-punch"), { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.5 }, ">-0.6");
+        },
+        s18(q, tl) {
+          tl.fromTo(q(".scell"), { opacity: 0, y: 24 }, { opacity: 1, y: 0, stagger: 0.1, duration: 0.34 }, "<0.05");
+          tl.fromTo(q(".scell.hit .dot"), { scale: 0 }, { scale: 1, stagger: 0.1, ease: "back.out(2)", duration: 0.3 }, ">-0.3");
+          tl.fromTo(q(".cov-side"), { opacity: 0, x: 24 }, { opacity: 1, x: 0, duration: 0.5 }, "<");
+        },
+        s19(q, tl) {
+          tl.fromTo(q(".mh, .mr"), { opacity: 0 }, { opacity: 1, stagger: 0.04, duration: 0.4 }, "<0.05");
+          const cells = q(".mcell > i");
+          cells.forEach((el, idx) => {
+            const fill = parseFloat(el.dataset.fill) || 0.5;
+            tl.fromTo(el, { scaleY: 0 }, { scaleY: fill, duration: 0.6, ease: "power2.out" }, 0.5 + idx * 0.07);
+          });
+          tl.fromTo(q(".exp-side"), { opacity: 0, x: 24 }, { opacity: 1, x: 0, duration: 0.5 }, ">-0.4");
+        },
+        s20(q, tl) {
+          tl.fromTo(q(".axis"), { opacity: 0, y: 34 }, { opacity: 1, y: 0, stagger: 0.16, duration: 0.42, ease: "power3.out" }, "<0.05");
+          tl.fromTo(q(".axes-punch"), { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.5 }, ">-0.2");
+        },
+        s22(q, tl) {
+          tl.fromTo(q(".deck-underline"), { scaleX: 0 }, { scaleX: 1, duration: 0.6, ease: "power3.inOut" }, 0.5);
+          tl.fromTo(q(".title-sub"), { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.5 }, 0.7);
+          tl.fromTo(q(".axis-row .arc"), { opacity: 0, y: 14 }, { opacity: 1, y: 0, stagger: 0.1, duration: 0.4 }, 0.95);
+          tl.fromTo(q(".title-brand"), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5 }, 1.3);
+        },
+      };
+
+      /* ---------- vertical centering: balance the content block in the 1080 stage ---------- */
+      function center(s) {
+        const sc = s.querySelector(".scene");
+        if (!sc) return;
+        if (s.classList.contains("centered")) { sc.style.transform = "none"; return; }
+        sc.style.transform = "none";
+        const kids = [...sc.children].filter((el) => !el.classList.contains("notes") && (el.offsetWidth || el.offsetHeight));
+        // restore any prior footer repositioning (idempotent on revisit)
+        kids.forEach((el) => { if (el.dataset.footMoved) { el.style.top = ""; el.style.bottom = el.dataset.footBottom; } });
+        // split into main content vs bottom-anchored footers/punch lines
+        const FOOT = ".meta-foot,.traj-punch,.axes-punch,.flow-note,.sev-note,.var-note";
+        const mains = [], foots = [];
+        kids.forEach((el) => { (el.matches(FOOT) ? foots : mains).push(el); });
+        let mt = 1e9, mb = -1e9;
+        mains.forEach((el) => { const t = el.offsetTop, b = t + el.offsetHeight; if (t < mt) mt = t; if (b > mb) mb = b; });
+        if (mt === 1e9) { mt = 0; mb = 0; }
+        // pull footers up to sit just below the main content
+        let cur = mb + 34;
+        foots.forEach((el) => {
+          if (!el.dataset.footMoved) { el.dataset.footMoved = "1"; el.dataset.footBottom = getComputedStyle(el).bottom; }
+          el.style.bottom = "auto"; el.style.top = cur + "px"; cur += el.offsetHeight + 16;
+        });
+        const bot = foots.length ? cur - 16 : mb;
+        const dy = Math.round((1080 - (bot - mt)) / 2 - mt);
+        sc.style.transform = "translateY(" + dy + "px)";
+      }
+
+      /* ---------- entrance animation (idempotent) ---------- */
+      function animate(s) {
+        const q = gsap.utils.selector(s);
+        const tl = gsap.timeline();
+        const k = q(".kicker");
+        if (k.length) tl.fromTo(k, { opacity: 0, x: -22 }, { opacity: 1, x: 0, duration: 0.4, ease: "power2.out" }, 0);
+        const h = q(".scene-h, .title-h");
+        if (h.length) tl.fromTo(h, { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 0.06);
+        const r = q(".r");
+        if (r.length) tl.fromTo(r, { opacity: 0, y: 28 }, { opacity: 1, y: 0, duration: 0.45, stagger: 0.08, ease: "power2.out" }, 0.12);
+        (SPECIAL[s.id] || function () {})(q, tl);
+        if (STILL) tl.progress(1);
+        return tl;
+      }
+
+      /* ---------- navigation ---------- */
+      function go(n) {
+        n = Math.max(0, Math.min(N - 1, n));
+        slides.forEach((s) => s.classList.remove("active"));
+        const s = slides[n];
+        s.classList.add("active");
+        i = n;
+        if ("#" + (n + 1) !== location.hash) history.replaceState(null, "", "#" + (n + 1));
+        document.getElementById("progress-fill").style.transform = "scaleX(" + ((n + 1) / N) + ")";
+        document.getElementById("counter").textContent = String(n + 1).padStart(2, "0") + " / " + N;
+        document.getElementById("sb-section").innerHTML = s.dataset.kicker || "";
+        center(s);
+        if (curTL) curTL.kill();
+        curTL = animate(s);
+        if (document.getElementById("notes").classList.contains("show")) updateNotes();
+      }
+      function next() { go(i + 1); }
+      function prev() { go(i - 1); }
+
+      function updateNotes() {
+        const note = slides[i].querySelector(".notes");
+        document.getElementById("notes-body").innerHTML = note ? note.innerHTML : "";
+      }
+
+      window.addEventListener("keydown", (e) => {
+        const k = e.key;
+        if (["ArrowRight", "ArrowDown", "PageDown", " ", "Spacebar", "Enter"].includes(k)) { e.preventDefault(); next(); }
+        else if (["ArrowLeft", "ArrowUp", "PageUp", "Backspace"].includes(k)) { e.preventDefault(); prev(); }
+        else if (k === "Home") { go(0); }
+        else if (k === "End") { go(N - 1); }
+        else if (k === "f" || k === "F") {
+          if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+          else document.exitFullscreen?.();
+        }
+        else if (k === "n" || k === "N" || k === "s" || k === "S") {
+          document.getElementById("notes").classList.toggle("show");
+          updateNotes();
+        }
+        else if (k === "?" || k === "h" || k === "H") {
+          document.getElementById("help").classList.toggle("show");
+        }
+      });
+
+      window.addEventListener("click", (e) => {
+        if (e.target.closest("#overlay")) return;
+        next();
+      });
+      window.addEventListener("contextmenu", (e) => { e.preventDefault(); prev(); });
+
+      /* ---------- touch swipe ---------- */
+      let touchX = null;
+      window.addEventListener("touchstart", (e) => { touchX = e.changedTouches[0].clientX; }, { passive: true });
+      window.addEventListener("touchend", (e) => {
+        if (touchX === null) return;
+        const dx = e.changedTouches[0].clientX - touchX;
+        if (Math.abs(dx) > 50) { if (dx < 0) next(); else prev(); }
+        touchX = null;
+      }, { passive: true });
+
+      /* ---------- deep-link to a slide via #N, and stay in sync ---------- */
+      function slideFromHash() { return Math.max(0, Math.min(N - 1, (parseInt(location.hash.slice(1), 10) || 1) - 1)); }
+      window.addEventListener("hashchange", () => { const n = slideFromHash(); if (n !== i) go(n); });
+
+      /* ---------- first paint ---------- */
+      fit();
+      go(slideFromHash());
+    </script>
+  </body>
+</html>
