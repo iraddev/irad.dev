@@ -111,6 +111,11 @@
       .counter-row { display: flex; justify-content: space-between; font-size: 30px; margin-top: 6px; }
       .counter-row .cval { color: var(--cyan); font-variant-numeric: tabular-nums; }
       .jchip { position: absolute; bottom: 28px; left: 32px; font-size: 20px; color: var(--acc-txt); border: 1px solid var(--cyan); border-radius: 5px; padding: 6px 14px; }
+      .jside { position: absolute; right: 150px; top: 412px; width: 600px; }
+      .jside .jsh { font-size: 24px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--acc-txt); margin-bottom: 24px; }
+      .jside .jline { font-size: 28px; color: var(--fg); line-height: 1.5; margin-bottom: 22px; }
+      .jside .jline.dim { color: var(--dim); font-size: 24px; }
+      .jside .jline em { font-style: normal; color: var(--cyan); }
 
       /* confusion matrix */
       .cm { position: absolute; left: 150px; top: 320px; display: grid; grid-template-columns: 240px 300px 300px; grid-template-rows: 70px 150px 150px; gap: 0; }
@@ -543,51 +548,25 @@
           <aside class="notes">The honest tension: an LLM judge can be wrong in exactly the ways the agent is wrong. The answer isn't "trust it" — it's "constrain it, take away what it's bad at, and bound its cost." A general recipe for LLM-as-judge anywhere.</aside>
         </section>
 
-        <!-- ===== S11 — Judge A & B ===== -->
-        <section class="slide" id="s11" data-kicker="The judge · A &amp; B">
+        <!-- ===== S11 — The judge (consolidated) ===== -->
+        <section class="slide" id="s11" data-kicker="The judge">
           <div class="scene">
-            <div class="kicker">The judge · A &amp; B</div>
-            <div class="scene-h display" style="position:absolute;left:150px;top:172px">Shape the output. <span class="ac">Don't let it count.</span></div>
-            <div class="jpanel p-left">
-              <div class="panel-h">A · shape the output</div>
-              <div class="frow"><span class="fdot" style="background:var(--cyan)"></span><span class="fname">decouple from format</span><span class="fstat">md / json / transcript</span></div>
-              <div class="frow"><span class="fdot" style="background:var(--cyan)"></span><span class="fname">labels-parameterized schema</span><span class="fstat">locked</span></div>
-              <div class="frow silent"><span class="fdot" style="background:var(--amber)"></span><span class="fname">~1024-token default truncates JSON</span><span class="fstat" style="color:var(--amber)">force a high cap</span></div>
-              <div style="margin-top:18px;font-size:22px;color:var(--dim)">"the transport was the bug"</div>
+            <div class="kicker">The judge</div>
+            <div class="scene-h display" style="position:absolute;left:150px;top:172px;max-width:1560px">You don't trust the agent's output — so why trust a second model to <span class="ac">grade it?</span></div>
+            <div class="jpanel" style="left:150px;top:400px;width:920px;height:auto">
+              <div class="panel-h">what the judge counts</div>
+              <div class="frow"><span class="fdot" style="background:var(--cyan)"></span><span class="fname">real bug, flagged</span><span class="fstat">true positive</span></div>
+              <div class="frow"><span class="fdot" style="background:var(--amber)"></span><span class="fname">over-claimed a real bug's impact</span><span class="fstat" style="color:var(--amber)">false positive</span></div>
+              <div class="frow"><span class="fdot" style="background:#2c333f"></span><span class="fname">missed a real bug</span><span class="fstat">false negative</span></div>
+              <div class="frow silent"><span class="fdot" style="background:var(--cyan)"></span><span class="fname">stayed silent on by-design behavior</span><span class="fstat" style="color:var(--cyan-bright)">✓ true negative</span></div>
             </div>
-            <div class="jpanel p-right">
-              <div class="panel-h">B · counts in code</div>
-              <div class="codeline struck">model.count() <span style="color:var(--red)">✗</span><span class="strike-bar"></span></div>
-              <div class="codeline" style="color:var(--cyan)">derive_counts(labels) ✓</div>
-              <div class="counter-row" style="margin-top:24px"><span style="color:var(--dim)">classified perfectly</span><span class="cval">10</span></div>
-              <div class="counter-row"><span style="color:var(--dim)">miscounted total by</span><span class="cval" style="color:var(--amber)">1</span></div>
-              <div class="jchip">we took the calculator away</div>
+            <div class="jside">
+              <div class="jsh">score restraint, not just hits</div>
+              <div class="jline"><em>Severity gating</em> filters noise on the false-positive side — but positive matching ignores severity, so it <em>never costs recall.</em></div>
+              <div class="jline dim">The model classifies each finding; <em>code</em> derives the counts — never the model.</div>
             </div>
           </div>
-          <aside class="notes">On (B): the model classifies; code does the math. Counts are 100% derivable from the arrays, so we make them unfalsifiable. On the token cap: a judgement runs into the high thousands of tokens; the ~1024 default truncates mid-JSON — the transport was the bug. Both are general LLM-pipeline lessons.</aside>
-        </section>
-
-        <!-- ===== S12 — Judge C & D ===== -->
-        <section class="slide" id="s12" data-kicker="The judge · C &amp; D">
-          <div class="scene">
-            <div class="kicker">The judge · C &amp; D</div>
-            <div class="scene-h display" style="position:absolute;left:150px;top:172px">One bounded repair. A severity asymmetry.</div>
-            <div class="repair">
-              <div class="ah">C · one bounded repair</div>
-              <div class="rstep r"><span class="rdot"></span><span class="rlabel">invoke</span><span class="rmeta">call 1</span></div>
-              <div class="rstep r"><span class="rdot"></span><span class="rlabel">validate cross-array invariants</span><span class="rmeta">in code</span></div>
-              <div class="rstep r"><span class="rdot"></span><span class="rlabel">re-prompt with error list — once</span><span class="rmeta">call 2</span></div>
-              <div class="rstep r"><span class="rdot rstop"></span><span class="rlabel">else stop</span><span class="rmeta">no third try</span></div>
-              <div class="worst">worst case = <b style="color:var(--cyan)">2 calls</b></div>
-            </div>
-            <div class="asym">
-              <div class="ah">D · severity asymmetry</div>
-              <div class="arow r"><span class="g">gate</span><span>low/info OUT of the false-positive side (filters noise)</span></div>
-              <div class="arow r"><span class="keep">keep</span><span>positive matching IGNORES severity — gating never costs recall</span></div>
-              <div class="arow r"><span class="keep">keep</span><span>negatives scored as true negatives — restraint is in the math</span></div>
-            </div>
-          </div>
-          <aside class="notes">(C): one shot, one repair, then stop — if the model can't fix violations with the error list in front of it, a third try won't help. Bounded cost is the point. (D): gating only ever shrinks the false-positive side, so you never punish recall for noise the judge already filtered. The asymmetry is deliberate.</aside>
+          <aside class="notes">An LLM grades each finding against the labels. The honest tension: you don't trust the agent's output, so why trust a second model to grade it? The answer — take away what the LLM is bad at (it classifies; code derives the counts, so it can't miscount), and score what actually matters: restraint. Negatives are first-class — the agent earns a TRUE NEGATIVE for correctly staying silent on by-design behavior, and over-claiming a real bug's impact is a false positive. Severity gating filters low/info noise out of the false-positive side but never touches recall. Judge = an Opus-class model; numbers illustrative.</aside>
         </section>
 
         <!-- ===== S13 — Confusion matrix ===== -->
@@ -871,15 +850,10 @@
           tl.fromTo(q(".arrow"), { opacity: 0 }, { opacity: 1, stagger: 0.14, duration: 0.3 }, "<0.1");
         },
         s11(q, tl) {
-          tl.fromTo(q(".jpanel"), { opacity: 0, y: 24 }, { opacity: 1, y: 0, stagger: 0.12, duration: 0.45, ease: "power3.out" }, "<0.05");
-          tl.fromTo(q(".frow"), { opacity: 0, x: -16 }, { opacity: 1, x: 0, stagger: 0.12, duration: 0.3 }, ">-0.2");
-          tl.fromTo(q(".p-right .codeline, .p-right .counter-row, .p-right .jchip"), { opacity: 0, x: 16 }, { opacity: 1, x: 0, stagger: 0.1, duration: 0.3 }, "<");
-          tl.fromTo(q(".strike-bar"), { scaleX: 0 }, { scaleX: 1, duration: 0.45, ease: "power2.inOut" }, ">");
-        },
-        s12(q, tl) {
-          tl.fromTo(q(".rstep"), { opacity: 0, x: -22 }, { opacity: 1, x: 0, stagger: 0.16, duration: 0.34 }, "<0.05");
-          tl.fromTo(q(".worst"), { opacity: 0 }, { opacity: 1, duration: 0.4 }, ">");
-          tl.fromTo(q(".arow"), { opacity: 0, x: 22 }, { opacity: 1, x: 0, stagger: 0.16, duration: 0.34 }, "<0.4");
+          tl.fromTo(q(".jpanel"), { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, "<0.05");
+          tl.fromTo(q(".frow"), { opacity: 0, x: -16 }, { opacity: 1, x: 0, stagger: 0.14, duration: 0.32, ease: "power2.out" }, ">-0.25");
+          tl.fromTo(q(".frow.silent .fdot"), { scale: 0 }, { scale: 1, ease: "back.out(2.4)", duration: 0.4, transformOrigin: "center" }, ">-0.12");
+          tl.fromTo(q(".jside .jsh, .jside .jline"), { opacity: 0, x: 22 }, { opacity: 1, x: 0, stagger: 0.16, duration: 0.42, ease: "power2.out" }, "<0.15");
         },
         s13(q, tl) {
           tl.fromTo(q(".cell"), { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, stagger: 0.12, ease: "back.out(1.5)", duration: 0.4 }, "<0.1");
