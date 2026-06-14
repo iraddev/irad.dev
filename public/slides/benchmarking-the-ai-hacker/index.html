@@ -908,30 +908,48 @@
       };
 
       /* ---------- vertical centering: balance the content block in the 1080 stage ---------- */
+      // Pin the header (kicker + headline) at the top; vertically center the body BELOW it.
       function center(s) {
         const sc = s.querySelector(".scene");
         if (!sc) return;
-        if (s.classList.contains("centered") || s.classList.contains("top")) { sc.style.transform = "none"; return; }
         sc.style.transform = "none";
+        if (s.classList.contains("centered") || s.classList.contains("top")) return; // title/close: flex-centered
         const kids = [...sc.children].filter((el) => !el.classList.contains("notes") && (el.offsetWidth || el.offsetHeight));
-        // restore any prior footer repositioning (idempotent on revisit)
-        kids.forEach((el) => { if (el.dataset.footMoved) { el.style.top = ""; el.style.bottom = el.dataset.footBottom; } });
-        // split into main content vs bottom-anchored footers/punch lines
+        // restore prior positioning so we always measure the authored layout (idempotent on revisit)
+        kids.forEach((el) => {
+          if (el.dataset.cTop !== undefined) el.style.top = el.dataset.cTop;
+          if (el.dataset.footMoved) el.style.bottom = el.dataset.footBottom;
+        });
+        const isHeader = (el) => el.classList.contains("kicker") || el.classList.contains("scene-h");
+        const header = kids.filter(isHeader);
+        const body = kids.filter((el) => !isHeader(el));
+        if (!body.length) return;
+        let hb = 250; // header bottom (px from scene top)
+        header.forEach((el) => { hb = Math.max(hb, el.offsetTop + el.offsetHeight); });
         const FOOT = ".meta-foot,.traj-punch,.axes-punch,.flow-note,.sev-note,.var-note";
-        const mains = [], foots = [];
-        kids.forEach((el) => { (el.matches(FOOT) ? foots : mains).push(el); });
+        const mains = body.filter((el) => !el.matches(FOOT));
+        const foots = body.filter((el) => el.matches(FOOT));
         let mt = 1e9, mb = -1e9;
         mains.forEach((el) => { const t = el.offsetTop, b = t + el.offsetHeight; if (t < mt) mt = t; if (b > mb) mb = b; });
-        if (mt === 1e9) { mt = 0; mb = 0; }
-        // pull footers up to sit just below the main content
-        let cur = mb + 34;
+        if (mt === 1e9) { mt = hb + 48; mb = hb + 48; }
+        // pull bottom-anchored footers up to sit just below the main content
+        let cur = mb + 30;
         foots.forEach((el) => {
           if (!el.dataset.footMoved) { el.dataset.footMoved = "1"; el.dataset.footBottom = getComputedStyle(el).bottom; }
-          el.style.bottom = "auto"; el.style.top = cur + "px"; cur += el.offsetHeight + 16;
+          if (el.dataset.cTop === undefined) el.dataset.cTop = el.style.top || "";
+          el.style.bottom = "auto"; el.style.top = cur + "px"; cur += el.offsetHeight + 14;
         });
-        const bot = foots.length ? cur - 16 : mb;
-        const dy = Math.round((1080 - (bot - mt)) / 2 - mt);
-        sc.style.transform = "translateY(" + dy + "px)";
+        const bodyTop = mt, bodyBot = foots.length ? cur - 14 : mb, bodyH = bodyBot - bodyTop;
+        // center the body block in the region between the header and the bottom margin
+        const GAP = 60, BOTTOM = 1004;
+        const regionTop = hb + GAP;
+        const desiredTop = Math.max(regionTop, Math.round((regionTop + BOTTOM - bodyH) / 2));
+        const dy = desiredTop - bodyTop;
+        const targets = body.map((el) => [el, el.offsetTop + dy]); // read all before writing
+        targets.forEach(([el, top]) => {
+          if (el.dataset.cTop === undefined) el.dataset.cTop = el.style.top || "";
+          el.style.top = Math.round(top) + "px";
+        });
       }
 
       /* ---------- entrance animation (idempotent) ---------- */
