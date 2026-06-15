@@ -309,6 +309,18 @@
       .axis-row { margin-top: 40px; display: flex; gap: 16px; }
       .axis-row .arc { font-size: 22px; color: var(--acc-txt); border: 1px solid rgba(142,85,253,0.4); border-radius: 6px; padding: 8px 18px; letter-spacing: 0.1em; text-transform: uppercase; }
 
+      /* about me */
+      .about { position: absolute; left: 150px; right: 150px; top: 300px; display: flex; gap: 72px; align-items: flex-start; }
+      .about-photo { width: 320px; height: 320px; border-radius: 50%; object-fit: cover; flex: none; border: 2px solid rgba(142,85,253,0.55); box-shadow: 0 30px 90px rgba(0,0,0,0.6); }
+      .about-body { display: flex; flex-direction: column; gap: 14px; max-width: 1120px; }
+      .about-body .about-name { font-size: 64px; line-height: 1; color: var(--fg); }
+      .about-body .about-role { font-size: 32px; color: var(--cyan); letter-spacing: 0.01em; }
+      .about-body .about-role .ac { color: var(--cyan-bright); }
+      .about-body .about-line { font-size: 30px; color: var(--fg); line-height: 1.32; margin-top: 6px; }
+      .about-body .about-line em { font-style: normal; color: var(--cyan); }
+      .about-body .about-line .dimx { color: var(--dim); }
+      .about-body .about-line.dim { color: var(--dim); font-size: 26px; }
+
       /* ============================================================
          OVERLAY (viewport-fixed, NOT scaled)
          ============================================================ */
@@ -348,6 +360,25 @@
             <div class="title-brand"><span class="by">by</span><img src="assets/novee-logo-light.png" alt="Novee" /></div>
           </div>
           <aside class="notes">Open cold on the artifact: an autonomous agent handed us "it found twelve vulnerabilities." For an ML room, this talk is about measurement, not hacking — "no answer key" is plain English for ground truth. Every lesson transfers to any agent you can't fully predict.</aside>
+        </section>
+
+        <!-- ===== About me ===== -->
+        <section class="slide" id="sabout" data-kicker="Who's speaking">
+          <div class="scene">
+            <div class="kicker">Who's speaking</div>
+            <div class="scene-h display">About me</div>
+            <div class="about">
+              <img class="about-photo" src="assets/profile.png" alt="Irad Aharoni" />
+              <div class="about-body">
+                <div class="about-name r display">Irad Aharoni</div>
+                <div class="about-role r">Founding AI Research Engineer · <span class="ac">Novee</span></div>
+                <div class="about-line r">I build <em>AI-native offensive security</em> — an AI that continuously pentests real environments to surface exploitable bugs before attackers do.</div>
+                <div class="about-line r">Now on the <em>Harness &amp; Agent Research</em> team: model benchmarking, eval harnesses, and LLM-as-judge scoring — <span class="dimx">exactly this talk.</span></div>
+                <div class="about-line dim r">Previously: Security Researcher in the CTO Office at Orca Security · 5+ years in the IDF (Unit Matzov), finishing as Innovation Lead.</div>
+              </div>
+            </div>
+          </div>
+          <aside class="notes">Thirty seconds, max. The one line that earns the talk: this benchmark isn't a side project — it's the eval stack I build day-to-day on the Harness &amp; Agent Research team. Orca + Matzov establish the security background without dwelling. Then move on.</aside>
         </section>
 
         <!-- ===== S2 — Agenda ===== -->
@@ -824,6 +855,9 @@
           tl.fromTo(q(".deck-underline"), { scaleX: 0 }, { scaleX: 1, duration: 0.6, ease: "power3.inOut" }, 0.5);
           tl.fromTo(q(".title-sub"), { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.5 }, 0.7);
           tl.fromTo(q(".title-brand"), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5 }, 0.95);
+        },
+        sabout(q, tl) {
+          tl.fromTo(q(".about-photo"), { opacity: 0, scale: 0.92, x: -24 }, { opacity: 1, scale: 1, x: 0, duration: 0.55, ease: "power3.out" }, 0.1);
         },
         s2(q, tl) {
           tl.fromTo(q(".axis-chip"), { opacity: 0, x: 18 }, { opacity: 0.55, x: 0, stagger: 0.1, duration: 0.4 }, 0.3);

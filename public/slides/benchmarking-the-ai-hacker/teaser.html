@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Benchmarking the AI Hacker — teaser (clickable)</title>
+    <link rel="icon" type="image/png" href="assets/novee-icon.png" />
+    <link href="assets/fonts.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      :root {
+        --bg: #0b0e14;
+        --panel: #11151f;
+        --panel2: #0e1119;
+        --fg: #e6edf3;
+        --dim: #9aa6b8;
+        --cyan: #8e55fd;        /* Novee purple — main accent (fills, bars, large text) */
+        --cyan-bright: #c9a8ff;
+        --acc-txt: #a07cff;     /* slightly lighter purple for SMALL label text (AA on dark) */
+        --amber: #ffb020;       /* contrast / over-claim trap */
+        --red: #ff4d4d;
+        --line: rgba(142, 85, 253, 0.12);
+      }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); color: var(--fg); }
+      body { font-family: "JetBrains Mono", monospace; }
+      .display { font-family: "Archivo Black", "Arial Black", sans-serif; letter-spacing: -0.02em; }
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+
+      /* ---------- persistent chrome (track 0) ---------- */
+      #chrome { position: absolute; inset: 0; background: var(--bg); }
+      .grid { position: absolute; inset: 0;
+        background-image: linear-gradient(to right, var(--line) 1px, transparent 1px), linear-gradient(to bottom, var(--line) 1px, transparent 1px);
+        background-size: 64px 64px; }
+      .scanlines { position: absolute; inset: 0; opacity: 0.5; mix-blend-mode: overlay;
+        background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.05) 0, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 4px); }
+      .vignette { position: absolute; inset: 0; background: radial-gradient(120% 120% at 50% 45%, transparent 55%, rgba(0,0,0,0.55) 100%); }
+      .glow { position: absolute; left: 50%; top: 46%; width: 1300px; height: 1300px; transform: translate(-50%, -50%); border-radius: 50%;
+        background: radial-gradient(circle, rgba(142,85,253,0.12) 0%, transparent 62%); }
+      .reg { position: absolute; width: 26px; height: 26px; opacity: 0.5; }
+      .reg::before, .reg::after { content: ""; position: absolute; background: var(--cyan); }
+      .reg::before { width: 26px; height: 2px; top: 0; }
+      .reg::after { width: 2px; height: 26px; left: 0; }
+      .reg.tl { top: 40px; left: 40px; } .reg.tr { top: 40px; right: 40px; transform: scaleX(-1); }
+      .reg.bl { bottom: 40px; left: 40px; transform: scaleY(-1); } .reg.br { bottom: 40px; right: 40px; transform: scale(-1, -1); }
+      .statusbar { position: absolute; top: 44px; left: 90px; right: 90px; height: 30px; display: flex; align-items: center; gap: 18px;
+        font-size: 19px; color: var(--dim); letter-spacing: 0.12em; text-transform: uppercase; }
+      .rec-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--red); }
+      .statusbar .sep { flex: 1; height: 1px; background: var(--line); }
+      .sb-logo { display: inline-flex; align-items: center; margin-right: 4px; }
+      .brand-logo { height: 26px; width: auto; display: block; }
+      .progress-track { position: absolute; bottom: 48px; left: 90px; right: 90px; height: 3px; background: rgba(255,255,255,0.07); }
+      #progress-fill { position: absolute; left: 0; top: 0; height: 100%; width: 100%; background: var(--cyan); transform-origin: left center; transform: scaleX(0); box-shadow: 0 0 14px rgba(142,85,253,0.6); }
+      .progress-label { position: absolute; bottom: 60px; right: 90px; font-size: 17px; color: var(--dim); letter-spacing: 0.18em; }
+
+      /* ---------- shared scene utilities ---------- */
+      .scene { position: absolute; inset: 0; padding: 126px 150px 118px; }
+      .kicker { font-size: 22px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--acc-txt); margin-bottom: 16px; }
+      .scene-h { font-size: 82px; color: var(--fg); line-height: 0.96; }
+      .scene-h .ac { color: var(--cyan); }
+      .scene-sub { font-size: 32px; color: var(--cyan); margin-top: 16px; letter-spacing: 0.01em; }
+      .scene-sub.dim { color: var(--dim); }
+      .panel { background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; }
+      .num { color: var(--cyan); font-weight: 700; display: inline-block; }
+      .am { color: var(--amber); }
+      .meta-foot { position: absolute; left: 150px; bottom: 150px; font-size: 22px; color: var(--dim); letter-spacing: 0.06em; }
+
+      /* scene 1 */
+      .terminal { position: absolute; top: 250px; left: 150px; width: 1180px; background: var(--panel); border: 1px solid rgba(142,85,253,0.22); border-radius: 10px; box-shadow: 0 30px 90px rgba(0,0,0,0.6); overflow: hidden; }
+      .term-head { display: flex; align-items: center; gap: 12px; padding: 18px 22px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+      .term-dot { width: 13px; height: 13px; border-radius: 50%; }
+      .term-title { margin-left: 14px; font-size: 18px; color: var(--dim); letter-spacing: 0.08em; }
+      .term-body { padding: 34px 30px; font-size: 38px; line-height: 1.5; white-space: nowrap; }
+      #cmd-wrap { display: inline-block; overflow: hidden; white-space: nowrap; vertical-align: bottom; }
+      #cmd-line { display: inline-block; white-space: nowrap; }
+      .prompt { color: var(--cyan); }
+      #term-cursor { display: inline-block; width: 18px; height: 38px; background: var(--cyan); vertical-align: -6px; margin-left: 4px; }
+      #glitch-q { position: absolute; top: 250px; left: 0; font-size: 120px; color: var(--red); opacity: 0; }
+      #s1-headline { position: absolute; left: 150px; bottom: 150px; font-size: 150px; line-height: 0.9; color: var(--fg); }
+
+      /* scene 2 — measurement problem */
+      .pts { position: absolute; left: 150px; top: 280px; display: flex; flex-direction: column; gap: 22px; max-width: 1200px; }
+      .pt { font-size: 46px; color: var(--fg); display: flex; align-items: baseline; gap: 22px; }
+      .pt .bullet { color: var(--cyan); font-size: 30px; }
+      .pt em { font-style: normal; color: var(--cyan); }
+      .pt .amx { color: var(--amber); font-style: normal; }
+      .variance { position: absolute; right: 150px; top: 285px; display: flex; gap: 18px; }
+      .vrun { background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 16px 22px; text-align: center; }
+      .vrun .vlabel { font-size: 18px; color: var(--dim); letter-spacing: 0.1em; }
+      .vrun .vnum { font-size: 56px; color: var(--cyan); font-weight: 700; font-variant-numeric: tabular-nums; }
+      #s2-punch { position: absolute; left: 150px; bottom: 168px; font-size: 76px; color: var(--fg); max-width: 1500px; }
+      #s2-punch em { font-style: normal; color: var(--cyan); }
+
+      /* scene 3 — ground truth (editor) */
+      .editor { position: absolute; top: 290px; left: 150px; width: 1160px; background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; box-shadow: 0 30px 90px rgba(0,0,0,0.55); }
+      .editor-head { display: flex; gap: 26px; padding: 16px 26px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 18px; color: var(--dim); }
+      .editor-head .path { color: var(--fg); }
+      .code { padding: 24px 0; font-size: 29px; line-height: 1.6; }
+      .ln { display: flex; gap: 24px; padding: 0 30px; }
+      .gutter { width: 38px; text-align: right; color: #7d8a9c; }
+      .k-cyan { color: var(--cyan); } .k-amber { color: var(--amber); } .str { color: #9fb2c4; } .punc { color: var(--dim); }
+      .trap-tag { display: inline-block; margin-left: 16px; font-size: 20px; color: var(--amber); border: 1px solid var(--amber); border-radius: 4px; padding: 2px 10px; letter-spacing: 0.06em; }
+      .s3-side { position: absolute; left: 1360px; top: 300px; display: flex; flex-direction: column; gap: 18px; max-width: 380px; }
+      .s3-side .lbl { font-size: 24px; color: var(--fg); } .s3-side .lbl .c { color: var(--cyan); } .s3-side .lbl .a { color: var(--amber); }
+      .s3-side .note { font-size: 21px; color: var(--dim); line-height: 1.5; margin-top: 8px; }
+
+      /* scene 4 — application coverage */
+      .targets { position: absolute; left: 150px; right: 150px; top: 300px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; }
+      .tcard { background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 26px 22px; }
+      .tcard .tname { font-size: 30px; color: var(--fg); } .tcard .tname b { color: var(--cyan); }
+      .tcard .tclass { margin-top: 10px; font-size: 21px; color: var(--acc-txt); letter-spacing: 0.04em; }
+      .tcard .tver { margin-top: 16px; font-size: 18px; color: var(--dim); }
+      .tcard .tline { margin-top: 14px; height: 5px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+      .tcard .tline > i { display: block; height: 100%; width: 100%; background: var(--cyan); transform-origin: left center; transform: scaleX(0); }
+
+      /* scene 5 — judge */
+      .jpanel { position: absolute; top: 300px; width: 760px; height: 540px; background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 28px 32px; }
+      #p-model { left: 150px; } #p-code { left: 980px; }
+      .panel-h { font-size: 23px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); margin-bottom: 22px; }
+      .frow { display: flex; align-items: center; gap: 18px; font-size: 29px; padding: 12px 0; }
+      .frow .fdot { width: 15px; height: 15px; border-radius: 50%; flex: none; }
+      .frow .fname { flex: 1; color: var(--fg); } .frow .fstat { font-size: 23px; color: var(--dim); }
+      .frow.silent { border-top: 1px solid rgba(142,85,253,0.18); margin-top: 6px; padding-top: 18px; } .frow.silent .fname { color: var(--cyan); }
+      .codeline { font-size: 29px; line-height: 1.8; }
+      .codeline.struck { color: var(--dim); position: relative; }
+      #strike-bar { position: absolute; left: 0; top: 50%; height: 3px; width: 100%; background: var(--red); transform-origin: left center; transform: scaleX(0); }
+      .counter-row { display: flex; justify-content: space-between; font-size: 30px; margin-top: 6px; }
+      .counter-row .cval { color: var(--cyan); font-variant-numeric: tabular-nums; }
+      .jchip { position: absolute; bottom: 28px; left: 32px; font-size: 20px; color: var(--acc-txt); border: 1px solid var(--cyan); border-radius: 5px; padding: 6px 14px; }
+
+      /* scene 6 — precision & recall */
+      .cm { position: absolute; left: 150px; top: 320px; display: grid; grid-template-columns: 240px 300px 300px; grid-template-rows: 70px 150px 150px; gap: 0; }
+      .cm .h { display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--dim); letter-spacing: 0.06em; text-align: center; }
+      .cm .rh { display: flex; align-items: center; font-size: 22px; color: var(--dim); padding-right: 18px; text-align: right; justify-content: flex-end; }
+      .cm .cell { margin: 8px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border: 1px solid rgba(255,255,255,0.08); }
+      .cm .cell .ct { font-size: 26px; font-weight: 700; } .cm .cell .cl { font-size: 19px; color: var(--dim); }
+      .cell.tp { background: rgba(142,85,253,0.18); border-color: var(--cyan); } .cell.tp .ct { color: var(--cyan); }
+      .cell.fp { background: rgba(255,176,32,0.14); border-color: var(--amber); } .cell.fp .ct { color: var(--amber); }
+      .cell.fn { background: rgba(255,77,77,0.12); border-color: var(--red); } .cell.fn .ct { color: var(--red); }
+      .cell.tn { background: rgba(142,85,253,0.07); } .cell.tn .ct { color: var(--dim); }
+      .pr-formulas { position: absolute; right: 150px; top: 360px; display: flex; flex-direction: column; gap: 36px; }
+      .formula { font-size: 34px; color: var(--fg); } .formula .lab { color: var(--cyan); } .formula .den { color: var(--dim); } .formula .small { display: block; font-size: 21px; color: var(--dim); margin-top: 8px; }
+      .formula .amden { color: var(--amber); }
+
+      /* scene 7 — artifact quality */
+      .rubric { position: absolute; left: 150px; top: 300px; width: 1080px; }
+      .rcrit { display: flex; align-items: center; gap: 22px; font-size: 36px; padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+      .rcrit .mark { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex: none; }
+      .rcrit .mark.ok { background: rgba(142,85,253,0.18); color: var(--cyan); border: 1px solid var(--cyan); }
+      .rcrit .mark.part { background: rgba(255,176,32,0.16); color: var(--amber); border: 1px solid var(--amber); }
+      .rcrit .rtext { color: var(--fg); }
+      .rubric-side { position: absolute; right: 150px; top: 320px; width: 360px; font-size: 24px; color: var(--dim); line-height: 1.6; }
+      .rubric-side b { color: var(--cyan); }
+
+      /* scene 8 — trajectory */
+      .tree { position: absolute; left: 150px; top: 300px; font-size: 30px; line-height: 1.66; }
+      .tnode { display: flex; align-items: center; gap: 16px; }
+      .tnode .branch { color: var(--dim); } .tnode .nname { color: var(--fg); } .tnode .nname.root { color: var(--cyan); font-weight: 700; }
+      .tnode .tag { font-size: 18px; padding: 1px 9px; border-radius: 4px; letter-spacing: 0.04em; }
+      .tnode .tag.llm { color: var(--acc-txt); border: 1px solid rgba(142,85,253,0.5); } .tnode .tag.tool { color: var(--dim); border: 1px solid rgba(255,255,255,0.14); }
+      .tnode .tag.reflect { color: var(--amber); border: 1px solid rgba(255,176,32,0.5); }
+      .traj-side { position: absolute; right: 150px; top: 300px; width: 430px; }
+      .traj-stat { background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 22px 26px; margin-bottom: 18px; }
+      .traj-stat .sl { font-size: 20px; color: var(--dim); letter-spacing: 0.08em; } .traj-stat .sv { font-size: 40px; color: var(--cyan); font-variant-numeric: tabular-nums; }
+      #traj-punch { position: absolute; left: 150px; bottom: 150px; font-size: 34px; color: var(--dim); max-width: 1500px; } #traj-punch em { font-style: normal; color: var(--fg); }
+
+      /* scene 9 — coverage */
+      .surface { position: absolute; left: 150px; top: 310px; display: grid; grid-template-columns: repeat(3, 360px); gap: 18px; }
+      .scell { background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 20px 22px; display: flex; align-items: center; gap: 16px; font-size: 26px; }
+      .scell .dot { width: 14px; height: 14px; border-radius: 50%; flex: none; background: #2c333f; }
+      .scell.hit .dot { background: var(--cyan); box-shadow: 0 0 12px rgba(142,85,253,0.7); } .scell.hit { color: var(--fg); }
+      .scell.miss { color: var(--dim); }
+      .cov-side { position: absolute; right: 150px; top: 330px; width: 360px; font-size: 24px; color: var(--dim); line-height: 1.6; } .cov-side b { color: var(--cyan); }
+
+      /* scene 10 — comparative experiments */
+      .matrix { position: absolute; left: 150px; top: 320px; display: grid; grid-template-columns: 180px repeat(5, 150px); gap: 12px; align-items: center; }
+      .matrix .mh { font-size: 21px; color: var(--dim); text-align: center; letter-spacing: 0.04em; text-transform: uppercase; }
+      .matrix .mr { font-size: 24px; color: var(--fg); }
+      .matrix .mcell { height: 64px; background: var(--panel); border: 1px solid rgba(255,255,255,0.07); border-radius: 7px; overflow: hidden; display: flex; align-items: flex-end; }
+      .matrix .mcell > i { display: block; width: 100%; background: linear-gradient(to top, var(--cyan), var(--cyan-bright)); transform-origin: bottom center; transform: scaleY(0); height: 100%; }
+      .exp-side { position: absolute; right: 150px; top: 340px; width: 360px; font-size: 24px; color: var(--dim); line-height: 1.55; } .exp-side b { color: var(--cyan); }
+
+      /* scene 11 — multi-axis */
+      .axes { position: absolute; left: 150px; right: 150px; top: 320px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; }
+      .axis { background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 30px 26px; }
+      .axis .an { font-size: 21px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--acc-txt); } .axis .at { margin-top: 16px; font-size: 30px; color: var(--fg); line-height: 1.15; } .axis .ad { margin-top: 14px; font-size: 20px; color: var(--dim); line-height: 1.4; }
+      #s11-punch { position: absolute; left: 150px; bottom: 150px; font-size: 34px; color: var(--cyan); }
+
+      /* scene 12 — takeaway */
+      #s12 { display: flex; flex-direction: column; justify-content: center; }
+      #s12-line { font-size: 92px; color: var(--fg); line-height: 1.04; max-width: 1560px; } #s12-line em { font-style: normal; color: var(--cyan); }
+      #s12-sub { margin-top: 30px; font-size: 36px; color: var(--dim); }
+
+      /* scene 13 — title */
+      #s13 { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
+      #s13-title { font-size: 158px; line-height: 0.92; color: var(--fg); }
+      #s13-underline { height: 8px; width: 720px; background: var(--cyan); transform-origin: left center; transform: scaleX(0); margin-top: 24px; box-shadow: 0 0 24px rgba(142,85,253,0.6); }
+      #s13-sub { margin-top: 36px; font-size: 44px; color: var(--cyan); }
+      #s13-foot { margin-top: 30px; font-size: 28px; color: var(--dim); letter-spacing: 0.22em; text-transform: uppercase; }
+      .s13-brand { margin-top: 44px; display: inline-flex; align-items: center; gap: 20px; }
+      .s13-brand .by { font-size: 22px; color: var(--dim); letter-spacing: 0.24em; text-transform: uppercase; }
+      .s13-brand img { height: 58px; width: auto; display: block; }
+      #s13-cursor { display: inline-block; width: 22px; height: 44px; background: var(--cyan); margin-left: 14px; vertical-align: -4px; }
+
+      /* intro title */
+      #stitle { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
+      #st-kicker { font-size: 24px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--acc-txt); margin-bottom: 20px; }
+      #st-title { font-size: 150px; line-height: 0.9; color: var(--fg); }
+      #st-underline { height: 8px; width: 720px; background: var(--cyan); transform-origin: left center; transform: scaleX(0); margin-top: 28px; box-shadow: 0 0 24px rgba(142,85,253,0.6); }
+      #st-sub { margin-top: 34px; font-size: 40px; color: var(--cyan); }
+
+      /* about / presenter */
+      .about-card { position: absolute; left: 150px; right: 150px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 80px; }
+      .about-photo { width: 360px; height: 360px; border-radius: 50%; object-fit: cover; flex: none; border: 3px solid rgba(142,85,253,0.55); box-shadow: 0 30px 90px rgba(0,0,0,0.6); }
+      .about-text { display: flex; flex-direction: column; }
+      .about-kicker { font-size: 24px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--acc-txt); margin-bottom: 18px; }
+      .about-name { font-size: 110px; line-height: 0.95; color: var(--fg); }
+      .about-role { margin-top: 22px; font-size: 40px; color: var(--cyan); }
+      .about-role b { color: var(--cyan-bright); font-weight: inherit; }
+      .about-tag { margin-top: 26px; font-size: 30px; color: var(--dim); max-width: 1040px; line-height: 1.35; }
+      .about-tag em { font-style: normal; color: var(--fg); }
+
+      /* ============================================================
+         DECK ENGINE (clickable) — overrides video base
+         ============================================================ */
+      html, body { width: 100%; height: 100%; }
+      body { margin: 0; background: #000; overflow: hidden; height: 100vh; }
+      #stage { position: absolute; top: 50%; left: 50%; width: 1920px; height: 1080px; transform-origin: center center; overflow: hidden; }
+      #deck { position: absolute; inset: 0; z-index: 1; }
+      .slide { opacity: 0; visibility: hidden; }
+      .slide.active { opacity: 1; visibility: visible; }
+      .notes { display: none; }
+      #chrome { z-index: 0; }
+      .glow { animation: glow-breathe 12s ease-in-out infinite; }
+      @keyframes glow-breathe { 0%,100% { transform: translate(-50%,-50%) scale(1); opacity: 1; } 50% { transform: translate(-50%,-50%) scale(1.16); opacity: 0.6; } }
+      .rec-dot { animation: rec-blink 1.2s steps(1) infinite; }
+      @keyframes rec-blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
+      #term-cursor, #s13-cursor { animation: rec-blink 1s steps(1) infinite; }
+      #progress-fill { transition: transform .4s ease; }
+      #overlay { position: fixed; inset: 0; pointer-events: none; }
+      #notes { position: fixed; left: 0; right: 0; bottom: 0; max-height: 34vh; overflow: auto; background: rgba(8,10,16,.96); border-top: 2px solid var(--cyan); color: #cdd6e2; font: 20px/1.6 "JetBrains Mono", monospace; padding: 20px 28px; transform: translateY(100%); transition: transform .25s; z-index: 50; pointer-events: auto; }
+      #notes.show { transform: none; }
+      #notes .nh { color: var(--acc-txt); letter-spacing: 0.16em; text-transform: uppercase; font-size: 13px; margin-bottom: 8px; }
+      #notes-body div { direction: rtl; text-align: right; }
+      #hint { position: fixed; bottom: 12px; left: 12px; color: #5a6573; font: 13px "JetBrains Mono", monospace; z-index: 50; }
+      #help { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: rgba(8,10,16,.97); border: 1px solid var(--cyan); border-radius: 12px; padding: 28px 38px; color: #cdd6e2; font: 18px/1.8 "JetBrains Mono", monospace; z-index: 60; box-shadow: 0 30px 90px rgba(0,0,0,0.7); display: none; pointer-events: auto; }
+      #help.show { display: block; }
+      #help h3 { color: var(--cyan); font-size: 22px; margin-bottom: 14px; letter-spacing: 0.08em; }
+      #help kbd { display: inline-block; min-width: 120px; color: var(--acc-txt); }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <div id="chrome">
+        <div class="grid"></div><div class="glow"></div><div class="scanlines"></div><div class="vignette"></div>
+        <span class="reg tl"></span><span class="reg tr"></span><span class="reg bl"></span><span class="reg br"></span>
+        <div class="statusbar">
+          <span class="sb-logo"><img class="brand-logo" src="assets/novee-logo-light.png" alt="Novee" /></span>
+          <span class="rec-dot"></span><span>rec</span><span id="sb-section">Title</span><span class="sep"></span><span>teaser // hayaData 2026</span>
+        </div>
+        <div class="progress-track"><div id="progress-fill"></div></div>
+        <div class="progress-label"><span id="counter">01 / 15</span></div>
+      </div>
+
+      <div id="deck">
+
+      <!-- Intro title (0-5) -->
+      <section class="slide scene" id="stitle" data-kicker="Title">
+        <div id="st-kicker">hayaData 2026 · teaser</div>
+        <div id="st-title" class="display"><span style="display:block">Benchmarking</span><span style="display:block">the AI <span style="color:var(--cyan)">Hacker</span></span></div>
+        <div id="st-underline"></div>
+        <div id="st-sub">Ground Truth · LLM Judges · Trust at Scale</div>
+      
+        <aside class="notes"><div dir="rtl">אז בואו נדבר על Benchmarking the AI Hacker — איך בכלל מודדים סוכן AI שתוקף לבד?</div></aside>
+      </section>
+
+      <!-- About / presenter (5-16) -->
+      <section class="slide scene" id="sabout" data-kicker="About">
+        <div class="about-card" id="about-card">
+          <img class="about-photo" id="about-photo" src="assets/profile.png" alt="Irad Aharoni" />
+          <div class="about-text">
+            <div class="about-kicker">Presented by</div>
+            <div class="about-name display">Irad Aharoni</div>
+            <div class="about-role">Founding AI Research Engineer · <b>Novee</b></div>
+            <div class="about-tag"><em>Harness &amp; Agent Research</em> — the eval stack behind this work.</div>
+          </div>
+        </div>
+      
+        <aside class="notes"><div dir="rtl">אבל רגע, קודם כל — נעים מאוד, אני Irad, Founding AI Research Engineer ב-Novee. אני בצוות ה-Harness &amp; Agent Research, ובעצם בונה בדיוק את ה-eval stack שאתם עומדים לראות.</div></aside>
+      </section>
+
+      <!-- S1 hook (16-23) -->
+      <section class="slide scene" id="s1" data-kicker="Hook">
+        <div class="terminal" id="s1-term">
+          <div class="term-head"><span class="term-dot" style="background:#ff5f56"></span><span class="term-dot" style="background:#ffbd2e"></span><span class="term-dot" style="background:#27c93f"></span><span class="term-title">agent — autonomous assessment</span></div>
+          <div class="term-body"><span id="cmd-wrap" data-layout-allow-overflow><span id="cmd-line"><span class="prompt">&gt;</span> agent found <span class="num">12</span> vulnerabilities</span></span><span id="term-cursor"></span></div>
+        </div>
+        <div id="glitch-q">?</div>
+        <div id="s1-headline" class="display"><span style="display:block">Is it any</span><span style="display:block">good?</span></div>
+      
+        <aside class="notes"><div dir="rtl">תארו לכם: סוכן AI תוקף מערכת לגמרי לבד, ובסוף מודיע לכם — "מצאתי שתים-עשרה חולשות". [רגע] אוקיי... אבל זה טוב?</div></aside>
+      </section>
+
+      <!-- S2 measurement problem (7-17) -->
+      <section class="slide scene" id="s2" data-kicker="The measurement problem">
+        <div class="kicker" style="position:absolute;left:150px;top:126px">The measurement problem</div>
+        <div class="pts" id="s2-pts">
+          <div class="pt"><span class="bullet">▹</span><span>Same target, same config — <em>different findings every run.</em></span></div>
+          <div class="pt"><span class="bullet">▹</span><span>A confident agent <span class="amx">over-reports.</span></span></div>
+          <div class="pt"><span class="bullet">▹</span><span>And there's <em>no answer key.</em></span></div>
+        </div>
+        <div class="variance" id="s2-var">
+          <div class="vrun"><div class="vlabel">run a</div><div class="vnum">9</div></div>
+          <div class="vrun"><div class="vlabel">run b</div><div class="vnum">14</div></div>
+          <div class="vrun"><div class="vlabel">run c</div><div class="vnum">11</div></div>
+        </div>
+        <div id="s2-punch"><em>Evaluation</em> — not capability — is the bottleneck.</div>
+      
+        <aside class="notes"><div dir="rtl">כי תראו מה קורה: מריצים את אותו סוכן כמה פעמים, ובכל פעם מקבלים תוצאות אחרות. הוא נוטה לדווח על יותר מדי דברים, ואין לנו בכלל מפתח-תשובות להשוות מולו. אז בעצם ה-evaluation — לא היכולת של הסוכן — הוא צוואר הבקבוק האמיתי.</div></aside>
+      </section>
+
+      <!-- S3 ground truth as code (17-27) -->
+      <section class="slide scene" id="s3" data-kicker="The data foundation">
+        <div class="kicker" style="position:absolute;left:150px;top:126px">The data foundation</div>
+        <div class="scene-h display" style="position:absolute;left:150px;top:172px">Ground truth as <span class="ac">code</span></div>
+        <div class="editor" id="s3-editor">
+          <div class="editor-head"><span class="path">benchmarks / grafana / labels.json</span><span>versioned · reviewed in PRs</span></div>
+          <div class="code" id="s3-code">
+            <div class="ln"><span class="gutter">1</span><span><span class="punc">{</span></span></div>
+            <div class="ln"><span class="gutter">2</span><span><span class="k-cyan">"positives"</span><span class="punc">: [</span>  <span class="punc">//</span> <span class="str">known CVEs</span></span></div>
+            <div class="ln"><span class="gutter">3</span><span>&nbsp;&nbsp;<span class="punc">{</span> <span class="str">"id"</span><span class="punc">:</span> <span class="str">"CVE-2025-3260"</span> <span class="punc">},</span></span></div>
+            <div class="ln"><span class="gutter">4</span><span>&nbsp;&nbsp;<span class="punc">{</span> <span class="str">"id"</span><span class="punc">:</span> <span class="str">"CVE-2025-4123"</span> <span class="punc">}</span></span></div>
+            <div class="ln"><span class="gutter">5</span><span><span class="punc">],</span></span></div>
+            <div class="ln" id="s3-neg"><span class="gutter">6</span><span><span class="k-amber">"negatives"</span><span class="punc">: [</span> <span class="str">"anonymous access"</span> <span class="punc">]</span><span class="trap-tag">hard negative</span></span></div>
+            <div class="ln"><span class="gutter">7</span><span><span class="punc">}</span></span></div>
+          </div>
+        </div>
+        <div class="s3-side">
+          <div class="lbl"><span class="c">positives</span> — what's really there</div>
+          <div class="lbl"><span class="a">negatives</span> — what a confident agent over-claims</div>
+          <div class="note">preconditions, severity, and seeded state make every label reproducible.</div>
+        </div>
+      
+        <aside class="notes"><div dir="rtl">אז הכול מתחיל ב-ground truth, ואנחנו מתייחסים אליו ממש כמו לקוד. תנו לי דוגמה: ה-positives הם החולשות האמיתיות, אלה שאנחנו כבר מכירים. וה-negatives? למשל "גישה אנונימית" שכבר חסומה — בדיוק המלכודת שסוכן קצת יותר מדי בטוח בעצמו פשוט ימציא.</div></aside>
+      </section>
+
+      <!-- S4 application coverage (27-37) -->
+      <section class="slide scene" id="s4" data-kicker="The overfit problem">
+        <div class="kicker" style="position:absolute;left:150px;top:126px">The overfit problem</div>
+        <div class="scene-h display" style="position:absolute;left:150px;top:172px">Five app classes, one harness</div>
+        <div class="targets" id="s4-targets">
+          <div class="tcard"><div class="tname"><b>dashboards</b></div><div class="tver">pinned + seeded</div><div class="tline"><i></i></div></div>
+          <div class="tcard"><div class="tname"><b>git forge</b></div><div class="tver">pinned + seeded</div><div class="tline"><i></i></div></div>
+          <div class="tcard"><div class="tname"><b>cloud storage</b></div><div class="tver">pinned + seeded</div><div class="tline"><i></i></div></div>
+          <div class="tcard"><div class="tname"><b>link manager</b></div><div class="tver">pinned + seeded</div><div class="tline"><i></i></div></div>
+          <div class="tcard"><div class="tname"><b>CRM</b></div><div class="tver">pinned + seeded</div><div class="tline"><i></i></div></div>
+        </div>
+        <div class="meta-foot" id="s4-foot">measuring generalization across app classes — not overfitting one target</div>
+      
+        <aside class="notes"><div dir="rtl">ויש פה עוד בעיה — בעיית ה-overfit. אז תנו לי להראות לכם כמה דוגמאות: יש לנו חמישה סוגים של אפליקציות — דשבורדים, git, אחסון, link manager, ו-CRM. וזה בדיוק העניין — ככה מודדים generalization, במקום לעשות overfit למטרה אחת ספציפית.</div></aside>
+      </section>
+
+      <!-- S5 the judge (37-48) -->
+      <section class="slide scene" id="s5" data-kicker="The LLM judge">
+        <div class="kicker" style="position:absolute;left:150px;top:126px">The LLM judge</div>
+        <div class="scene-h display" style="position:absolute;left:150px;top:172px">Classify in the model. <span class="ac">Count in code.</span></div>
+        <div class="jpanel" id="p-model">
+          <div class="panel-h">model · classify</div>
+          <div class="frow frow-a"><span class="fdot" style="background:var(--cyan)"></span><span class="fname">dashboard IDOR</span><span class="fstat">found</span></div>
+          <div class="frow frow-a"><span class="fdot" style="background:var(--cyan)"></span><span class="fname">ghost XSS</span><span class="fstat">found</span></div>
+          <div class="frow frow-a"><span class="fdot" style="background:var(--amber)"></span><span class="fname">org-admin bypass</span><span class="fstat">missed</span></div>
+          <div class="frow frow-a silent"><span class="fdot" style="background:var(--cyan)"></span><span class="fname">anonymous access (by design)</span><span class="fstat" style="color:var(--cyan-bright)">✓ not flagged</span></div>
+        </div>
+        <div class="jpanel" id="p-code">
+          <div class="panel-h">code · count</div>
+          <div class="codeline struck" id="cl-struck">model.count() <span style="color:var(--red)">✗</span><span id="strike-bar"></span></div>
+          <div class="codeline" style="color:var(--cyan)" id="cl-derive">derive_counts(labels) ✓</div>
+          <div class="counter-row" id="cr-1" style="opacity:0"><span style="color:var(--dim)">found</span><span class="cval" id="cnt-found">0</span></div>
+          <div class="counter-row" id="cr-2" style="opacity:0"><span style="color:var(--dim)">missed</span><span class="cval" id="cnt-missed">0</span></div>
+          <div class="jchip" id="s5-chip">one bounded repair · severity-gated</div>
+        </div>
+      
+        <aside class="notes"><div dir="rtl">עכשיו, מי שמדרג בכלל? LLM, בתור judge, שמשווה מול ה-labels. אבל שימו לב לנקודה החשובה: המודל רק מסווג — את הספירה עצמה אנחנו עושים בקוד, לא במודל. וככה אנחנו מנטרלים בדיוק את הטעות הכי נפוצה של מודלים.</div></aside>
+      </section>
+
+      <!-- S6 precision & recall (48-57) -->
+      <section class="slide scene" id="s6" data-kicker="The metric">
+        <div class="kicker" style="position:absolute;left:150px;top:126px">The metric</div>
+        <div class="scene-h display" style="position:absolute;left:150px;top:172px">Precision &amp; recall</div>
+        <div class="cm" id="s6-cm">
+          <div class="h"></div><div class="h">agent reported</div><div class="h">agent silent</div>
+          <div class="rh">in ground truth</div>
+          <div class="cell tp"><div class="ct">TP</div><div class="cl">caught</div></div>
+          <div class="cell fn"><div class="ct">FN</div><div class="cl">missed</div></div>
+          <div class="rh">not real</div>
+          <div class="cell fp"><div class="ct">FP</div><div class="cl">over-claim</div></div>
+          <div class="cell tn"><div class="ct">TN</div><div class="cl">restraint</div></div>
+        </div>
+        <div class="pr-formulas" id="s6-form">
+          <div class="formula"><span class="lab">recall</span> = TP / (TP + <span class="den">FN</span>)<span class="small">of the real bugs, how many were caught</span></div>
+          <div class="formula"><span class="lab">precision</span> = TP / (TP + <span class="amden">FP</span>)<span class="small">over-claims are penalized, not free</span></div>
+        </div>
+      
+        <aside class="notes"><div dir="rtl">ומכאן יוצא confusion matrix לכל label. ה-recall אומר לנו כמה מהחולשות האמיתיות הסוכן באמת תפס. וה-precision מעניש אותו על over-claims — כי דיווח על משהו שלא קיים, זה לא בא בחינם.</div></aside>
+      </section>
+
+      <!-- S7 artifact quality (57-66) -->
+      <section class="slide scene" id="s7" data-kicker="Artifact quality">
+        <div class="kicker" style="position:absolute;left:150px;top:126px">Artifact quality</div>
+        <div class="scene-h display" style="position:absolute;left:150px;top:172px">A right answer, <span class="ac">badly argued</span>, still fails</div>
+        <div class="rubric" id="s7-rubric">
+          <div class="rcrit"><span class="mark ok">✓</span><span class="rtext">evidence attached — request / response, not a claim</span></div>
+          <div class="rcrit"><span class="mark ok">✓</span><span class="rtext">reproducible steps</span></div>
+          <div class="rcrit"><span class="mark part">~</span><span class="rtext">severity justified against impact</span></div>
+          <div class="rcrit"><span class="mark ok">✓</span><span class="rtext">no hallucinated detail</span></div>
+        </div>
+        <div class="rubric-side" id="s7-side">Graded against a <b>rubric</b> — the report's quality, not just match / no-match.</div>
+      
+        <aside class="notes"><div dir="rtl">אבל רגע — גם תשובה נכונה, אם היא מנומקת גרוע, עדיין נכשלת. אז אנחנו מדרגים את ה-report עצמו מול rubric: יש evidence? אפשר לשחזר את זה? זאת כבר שאלה של איכות, לא רק של אם זה תפס או לא.</div></aside>
+      </section>
+
+      <!-- S8 trajectory analysis (66-78) -->
+      <section class="slide scene" id="s8" data-kicker="Trajectory">
+        <div class="kicker" style="position:absolute;left:150px;top:126px">Trajectory analysis · outcome ≠ process</div>
+        <div class="scene-h display" style="position:absolute;left:150px;top:172px">Score the <span class="ac">path</span>, not just the answer</div>
+        <div class="tree" id="s8-tree">
+          <div class="tnode"><span class="nname root">veevee/assess</span></div>
+          <div class="tnode"><span class="branch">├─</span><span class="nname">auth_config_render</span><span class="tag tool">tool</span></div>
+          <div class="tnode"><span class="branch">├─</span><span class="nname">main</span><span class="tag llm">llm</span></div>
+          <div class="tnode"><span class="branch">├─</span><span class="nname">reflect_1_analyze</span><span class="tag reflect">reflect</span></div>
+          <div class="tnode"><span class="branch">├─</span><span class="nname">reflect_1_resume</span><span class="tag llm">llm</span></div>
+          <div class="tnode"><span class="branch">└─</span><span class="nname">reflect_2_analyze</span><span class="tag reflect">reflect</span></div>
+        </div>
+        <div class="traj-side" id="s8-side">
+          <div class="traj-stat"><div class="sl">tokens</div><div class="sv" id="traj-tok">0</div></div>
+          <div class="traj-stat"><div class="sl">llm calls</div><div class="sv" id="traj-calls">0</div></div>
+          <div class="traj-stat"><div class="sl">cost / run</div><div class="sv">tracked</div></div>
+        </div>
+        <div id="traj-punch">did it reason its way there — or <em>stumble in?</em></div>
+      
+        <aside class="notes"><div dir="rtl">וכאן זה נהיה ממש מעניין, כי ה-outcome זה לא ה-process. אנחנו מנתחים את כל ה-trajectory — את המסלול שהסוכן עבר בדרך: ה-authenticate, ה-assess, סבבי ה-reflection. כי זה לא רק מה הוא מצא בסוף — אלא איך הוא בכלל הגיע לשם.</div></aside>
+      </section>
+
+      <!-- S9 coverage (78-87) -->
+      <section class="slide scene" id="s9" data-kicker="Coverage">
+        <div class="kicker" style="position:absolute;left:150px;top:126px">Coverage · search completeness</div>
+        <div class="scene-h display" style="position:absolute;left:150px;top:172px">Did it probe the whole surface?</div>
+        <div class="surface" id="s9-surface">
+          <div class="scell hit"><span class="dot"></span>auth</div>
+          <div class="scell hit"><span class="dot"></span>dashboards</div>
+          <div class="scell hit"><span class="dot"></span>datasources</div>
+          <div class="scell hit"><span class="dot"></span>api / admin</div>
+          <div class="scell miss"><span class="dot"></span>plugins</div>
+          <div class="scell miss"><span class="dot"></span>annotations</div>
+        </div>
+        <div class="cov-side" id="s9-side">A deterministic check — <b>no LLM</b> — against the surface spec. Search completeness, not a lucky hit.</div>
+      
+        <aside class="notes"><div dir="rtl">ויש עוד משהו — coverage. כלומר, האם הסוכן באמת סרק את כל ה-attack surface, או שהוא סתם נפל על חולשה אחת במקרה? וזו בדיקה דטרמיניסטית לגמרי, בלי שום LLM.</div></aside>
+      </section>
+
+      <!-- S10 comparative experiments (87-96) -->
+      <section class="slide scene" id="s10" data-kicker="Comparative experiments">
+        <div class="kicker" style="position:absolute;left:150px;top:126px">Comparative experiments</div>
+        <div class="scene-h display" style="position:absolute;left:150px;top:172px">Hold the benchmark fixed. <span class="ac">Vary one thing.</span></div>
+        <div class="matrix" id="s10-matrix">
+          <div class="mh"></div><div class="mh">low</div><div class="mh">medium</div><div class="mh">high</div><div class="mh">xhigh</div><div class="mh">max</div>
+          <div class="mr">opus</div><div class="mcell"><i></i></div><div class="mcell"><i></i></div><div class="mcell"><i></i></div><div class="mcell"><i></i></div><div class="mcell"><i></i></div>
+          <div class="mr">sonnet</div><div class="mcell"><i></i></div><div class="mcell"><i></i></div><div class="mcell"><i></i></div><div class="mcell"><i></i></div><div class="mcell"><i></i></div>
+        </div>
+        <div class="exp-side" id="s10-side">model × effort × <b>repeated seeds</b> → measure variance, ablate what actually moves the metric.</div>
+      
+        <aside class="notes"><div dir="rtl">ואז מגיעים הניסויים. מקבעים את ה-benchmark, ומשנים כל פעם רק דבר אחד — model, effort, או seed. מודדים את ה-variance, ומתחילים להבין מה באמת מזיז את המטריקה, ומה סתם רעש.</div></aside>
+      </section>
+
+      <!-- S11 multi-axis evaluation (96-107) -->
+      <section class="slide scene" id="s11" data-kicker="Multi-axis evaluation">
+        <div class="kicker" style="position:absolute;left:150px;top:126px">Multi-axis evaluation</div>
+        <div class="scene-h display" style="position:absolute;left:150px;top:172px">&ldquo;Is it good?&rdquo; isn't one number</div>
+        <div class="axes" id="s11-axes">
+          <div class="axis"><div class="an">destination</div><div class="at">found vs ground truth</div><div class="ad">precision · recall</div></div>
+          <div class="axis"><div class="an">quality</div><div class="at">is the finding well-argued</div><div class="ad">rubric score</div></div>
+          <div class="axis"><div class="an">path</div><div class="at">how it reasoned there</div><div class="ad">trajectory</div></div>
+          <div class="axis"><div class="an">search</div><div class="at">how much it explored</div><div class="ad">coverage</div></div>
+        </div>
+        <div id="s11-punch">four references, four measurements — none privileged.</div>
+      
+        <aside class="notes"><div dir="rtl">כי בסוף, "זה טוב?" זאת אף פעם לא שאלה של מספר אחד. אז הנה כמה דוגמאות למדידות — ארבעה צירים שונים: היעד מול ה-ground truth, האיכות, המסלול, והחיפוש. ואף אחד מהם לא חשוב יותר מהשני.</div></aside>
+      </section>
+
+      <!-- S12 takeaway (165-177) -->
+      <section class="slide scene" id="s12" data-kicker="Takeaway">
+        <div id="s12-line" class="display"><span style="display:block">Measure the <em>destination</em>, the <em>path</em>,</span><span style="display:block">and the <em>search</em> — not just the headline number.</span></div>
+        <div id="s12-sub">that's how you learn to trust an autonomous agent.</div>
+      
+        <aside class="notes"><div dir="rtl">אז אם יש משהו אחד שתיקחו מפה — תמדדו את היעד, את המסלול, ואת החיפוש. לא רק את המספר הגדול שבכותרת. ככה באמת לומדים מתי אפשר לסמוך על סוכן אוטונומי.</div></aside>
+      </section>
+
+      <!-- S13 title (177-186) -->
+      <section class="slide scene" id="s13" data-kicker="Close">
+        <div id="s13-title" class="display"><span style="display:block">Benchmarking</span><span style="display:block">the AI Hacker<span id="s13-cursor"></span></span></div>
+        <div id="s13-underline"></div>
+        <div id="s13-sub">Ground Truth &middot; LLM Judges &middot; Trust at Scale</div>
+        <div id="s13-foot">hayaData 2026 &middot; 30-min deep dive</div>
+        <div class="s13-brand" id="s13-brand"><span class="by">by</span><img src="assets/novee-logo-light.png" alt="Novee" /></div>
+      
+        <aside class="notes"><div dir="rtl">זה Benchmarking the AI Hacker. נתראה ב-hayaData 2026!</div></aside>
+      </section>
+      </div><!-- /deck -->
+    </div><!-- /stage -->
+
+    <div id="overlay">
+      <div id="notes"><div class="nh">speaker note · קריינות</div><div id="notes-body"></div></div>
+      <div id="hint">→/space next · click next · right-click prev · F fullscreen · N notes · ? help</div>
+      <div id="help">
+        <h3>keyboard</h3>
+        <div><kbd>&rarr; &darr; space</kbd> next</div>
+        <div><kbd>&larr; &uarr;</kbd> previous</div>
+        <div><kbd>click / right-click</kbd> next / prev</div>
+        <div><kbd>Home / End</kbd> first / last</div>
+        <div><kbd>F</kbd> fullscreen &middot; <kbd>N</kbd> notes &middot; <kbd>?</kbd> help</div>
+      </div>
+    </div>
+
+    <script>
+      "use strict";
+      const stage = document.getElementById("stage");
+      function fit() { const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = "translate(-50%,-50%) scale(" + s + ")"; }
+      window.addEventListener("resize", fit);
+
+      const slides = [...document.querySelectorAll(".slide")];
+      const N = slides.length;
+      let i = 0, curTL = null;
+      const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+
+      const SPECIAL = {
+        stitle(q, tl) {
+          tl.fromTo(q("#st-kicker"), { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.4 }, 0);
+          tl.fromTo(q("#st-title"), { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.55, ease: "power3.out" }, 0.15);
+          tl.fromTo(q("#st-underline"), { scaleX: 0 }, { scaleX: 1, duration: 0.55, ease: "power3.inOut" }, 0.55);
+          tl.fromTo(q("#st-sub"), { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.45 }, 0.75);
+        },
+        sabout(q, tl) {
+          tl.fromTo(q("#about-photo"), { opacity: 0, scale: 0.9, x: -26 }, { opacity: 1, scale: 1, x: 0, duration: 0.5, ease: "power3.out" }, 0);
+          tl.fromTo(q(".about-kicker"), { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.35 }, 0.2);
+          tl.fromTo(q(".about-name"), { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, 0.35);
+          tl.fromTo(q(".about-role"), { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.4 }, 0.55);
+          tl.fromTo(q(".about-tag"), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.4 }, 0.75);
+        },
+        s1(q, tl) {
+          tl.fromTo(q("#s1-term"), { opacity: 0, y: 36 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 0);
+          tl.fromTo(q("#cmd-wrap"), { width: 0 }, { width: "32ch", duration: 1.3, ease: "steps(32)" }, 0.4);
+          tl.set(q("#glitch-q"), { left: 770, top: 470 }, 1.45);
+          tl.fromTo(q("#glitch-q"), { opacity: 0 }, { opacity: 1, duration: 0.08 }, 1.45);
+          tl.to(q("#glitch-q"), { x: -14, duration: 0.05 }, 1.55); tl.to(q("#glitch-q"), { x: 12, duration: 0.05 }, 1.62); tl.to(q("#glitch-q"), { x: 0, duration: 0.05 }, 1.69);
+          tl.to(q("#glitch-q"), { opacity: 0, duration: 0.4 }, 2.1);
+          tl.fromTo(q("#s1-headline"), { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.5, ease: "power4.out" }, 1.9);
+        },
+        s2(q, tl) {
+          tl.fromTo(q("#s2-pts .pt"), { opacity: 0, x: -24 }, { opacity: 1, x: 0, duration: 0.4, stagger: 0.18, ease: "power2.out" }, 0.1);
+          tl.fromTo(q("#s2-var .vrun"), { opacity: 0, y: 22, scale: 0.92 }, { opacity: 1, y: 0, scale: 1, duration: 0.4, stagger: 0.12, ease: "back.out(1.6)" }, 0.3);
+          tl.fromTo(q("#s2-punch"), { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 1.1);
+        },
+        s3(q, tl) {
+          tl.fromTo(q("#s3-editor"), { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 0.15);
+          tl.fromTo(q("#s3-code .ln"), { opacity: 0, x: -18 }, { opacity: 1, x: 0, duration: 0.28, stagger: 0.08, ease: "power2.out" }, 0.3);
+          tl.fromTo(q("#s3-neg .trap-tag"), { opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1, duration: 0.35, ease: "back.out(2)" }, 1.0);
+          tl.fromTo(q(".s3-side .lbl, .s3-side .note"), { opacity: 0, x: 22 }, { opacity: 1, x: 0, duration: 0.4, stagger: 0.12 }, 0.5);
+        },
+        s4(q, tl) {
+          tl.fromTo(q("#s4-targets .tcard"), { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.4, stagger: 0.12, ease: "power3.out" }, 0.15);
+          tl.fromTo(q("#s4-targets .tline > i"), { scaleX: 0 }, { scaleX: 0.9, duration: 0.9, stagger: 0.12, ease: "power1.inOut" }, 0.5);
+          tl.fromTo(q("#s4-foot"), { opacity: 0 }, { opacity: 1, duration: 0.5 }, 1.1);
+        },
+        s5(q, tl) {
+          tl.fromTo(q("#p-model"), { opacity: 0, x: -26 }, { opacity: 1, x: 0, duration: 0.45, ease: "power3.out" }, 0.1);
+          tl.fromTo(q("#p-code"), { opacity: 0, x: 26 }, { opacity: 1, x: 0, duration: 0.45, ease: "power3.out" }, 0.2);
+          tl.fromTo(q("#p-model .frow"), { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: 0.3, stagger: 0.14, ease: "power2.out" }, 0.5);
+          tl.fromTo(q("#strike-bar"), { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: "power2.inOut" }, 1.0);
+          tl.fromTo(q("#cl-derive"), { opacity: 0, x: 14 }, { opacity: 1, x: 0, duration: 0.35 }, 1.2);
+          tl.set(q("#cr-1, #cr-2"), { opacity: 1 }, 1.3);
+          tl.call(() => { setText("cnt-found", "3"); setText("cnt-missed", "1"); }, null, 1.3);
+          tl.fromTo(q("#s5-chip"), { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.35 }, 1.5);
+        },
+        s6(q, tl) {
+          tl.fromTo(q("#s6-cm .h, #s6-cm .rh"), { opacity: 0 }, { opacity: 1, duration: 0.35, stagger: 0.05 }, 0.1);
+          tl.fromTo(q("#s6-cm .cell"), { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, duration: 0.4, stagger: 0.1, ease: "back.out(1.5)" }, 0.3);
+          tl.fromTo(q("#s6-form .formula"), { opacity: 0, x: 24 }, { opacity: 1, x: 0, duration: 0.4, stagger: 0.2, ease: "power2.out" }, 0.9);
+        },
+        s7(q, tl) {
+          tl.fromTo(q("#s7-rubric .rcrit"), { opacity: 0, x: -22 }, { opacity: 1, x: 0, duration: 0.35, stagger: 0.18, ease: "power2.out" }, 0.1);
+          tl.fromTo(q("#s7-rubric .rcrit .mark"), { scale: 0 }, { scale: 1, duration: 0.3, stagger: 0.18, ease: "back.out(2.4)" }, 0.2);
+          tl.fromTo(q("#s7-side"), { opacity: 0, x: 22 }, { opacity: 1, x: 0, duration: 0.45 }, 0.9);
+        },
+        s8(q, tl) {
+          tl.fromTo(q("#s8-tree .tnode"), { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.32, stagger: 0.16, ease: "power2.out" }, 0.1);
+          tl.fromTo(q("#s8-side .traj-stat"), { opacity: 0, x: 24 }, { opacity: 1, x: 0, duration: 0.4, stagger: 0.18, ease: "power2.out" }, 0.4);
+          tl.call(() => { setText("traj-tok", "48,120"); setText("traj-calls", "23"); }, null, 0.9);
+          tl.fromTo(q("#traj-punch"), { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5 }, 1.3);
+        },
+        s9(q, tl) {
+          tl.fromTo(q("#s9-surface .scell"), { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.32, stagger: 0.1, ease: "power2.out" }, 0.1);
+          tl.fromTo(q("#s9-surface .scell.hit .dot"), { scale: 0 }, { scale: 1, duration: 0.3, stagger: 0.1, ease: "back.out(2)" }, 0.4);
+          tl.fromTo(q("#s9-side"), { opacity: 0, x: 22 }, { opacity: 1, x: 0, duration: 0.45 }, 0.8);
+        },
+        s10(q, tl) {
+          tl.fromTo(q("#s10-matrix .mh, #s10-matrix .mr"), { opacity: 0 }, { opacity: 1, duration: 0.35, stagger: 0.04 }, 0.1);
+          const fills = [0.35, 0.55, 0.72, 0.8, 0.85, 0.3, 0.42, 0.5, 0.55, 0.58];
+          q("#s10-matrix .mcell > i").forEach((el, idx) => tl.fromTo(el, { scaleY: 0 }, { scaleY: fills[idx] || 0.5, duration: 0.5, ease: "power2.out" }, 0.4 + idx * 0.06));
+          tl.fromTo(q("#s10-side"), { opacity: 0, x: 22 }, { opacity: 1, x: 0, duration: 0.45 }, 1.1);
+        },
+        s11(q, tl) {
+          tl.fromTo(q("#s11-axes .axis"), { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.4, stagger: 0.16, ease: "power3.out" }, 0.1);
+          tl.fromTo(q("#s11-punch"), { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5 }, 0.9);
+        },
+        s12(q, tl) {
+          tl.fromTo(q("#s12-line"), { opacity: 0, y: 32 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 0.1);
+          tl.fromTo(q("#s12-sub"), { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.5 }, 0.6);
+        },
+        s13(q, tl) {
+          tl.fromTo(q("#s13-title"), { opacity: 0, y: 46 }, { opacity: 1, y: 0, duration: 0.6, ease: "power4.out" }, 0.1);
+          tl.fromTo(q("#s13-underline"), { scaleX: 0 }, { scaleX: 1, duration: 0.6, ease: "power3.inOut" }, 0.6);
+          tl.fromTo(q("#s13-sub"), { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.5 }, 0.8);
+          tl.fromTo(q("#s13-foot"), { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.5 }, 1.0);
+          tl.fromTo(q("#s13-brand"), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5 }, 1.2);
+        },
+      };
+
+      function animate(s) {
+        const q = gsap.utils.selector(s);
+        const tl = gsap.timeline();
+        const k = q(".kicker"); if (k.length) tl.fromTo(k, { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.4, ease: "power2.out" }, 0);
+        const h = q(".scene-h"); if (h.length) tl.fromTo(h, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 0.06);
+        (SPECIAL[s.id] || function () {})(q, tl);
+        return tl;
+      }
+
+      /* vertical balance — same as the video, run once while slides have layout (visibility:hidden keeps box) */
+      (function layout() {
+        const FOOT = ".meta-foot,#s2-punch,#traj-punch,#s11-punch";
+        const SKIP = { stitle: 1, sabout: 1, s1: 1, s12: 1, s13: 1 };
+        const isHeader = (el) => el.classList.contains("kicker") || el.classList.contains("scene-h");
+        document.querySelectorAll("#deck > section.scene").forEach((sec) => {
+          if (SKIP[sec.id]) return;
+          const kids = [...sec.children].filter((el) => !el.classList.contains("notes") && (el.offsetWidth || el.offsetHeight));
+          const header = kids.filter(isHeader), body = kids.filter((el) => !isHeader(el));
+          if (!body.length) return;
+          let hb = 250; header.forEach((el) => { hb = Math.max(hb, el.offsetTop + el.offsetHeight); });
+          const mains = body.filter((el) => !el.matches(FOOT)), foots = body.filter((el) => el.matches(FOOT));
+          let mt = 1e9, mb = -1e9;
+          mains.forEach((el) => { const t = el.offsetTop, b = t + el.offsetHeight; if (t < mt) mt = t; if (b > mb) mb = b; });
+          if (mt === 1e9) { mt = hb + 90; mb = hb + 90; }
+          let cur = mb + 30;
+          foots.forEach((el) => { el.style.bottom = "auto"; el.style.top = cur + "px"; cur += el.offsetHeight + 14; });
+          const TOPGAP = 88, BOTTOM = 1004, MINGAP = 44;
+          const bodyBot = foots.length ? cur - 14 : mb;
+          let dy = (hb + TOPGAP) - mt;
+          if (bodyBot + dy > BOTTOM) dy = Math.max((hb + MINGAP) - mt, BOTTOM - bodyBot);
+          const targets = body.map((el) => [el, el.offsetTop + dy]);
+          targets.forEach(([el, top]) => { el.style.top = Math.round(top) + "px"; });
+        });
+      })();
+
+      function updateNotes() { const note = slides[i].querySelector(".notes"); document.getElementById("notes-body").innerHTML = note ? note.innerHTML : ""; }
+      function go(n) {
+        n = Math.max(0, Math.min(N - 1, n));
+        slides.forEach((s) => s.classList.remove("active"));
+        const s = slides[n]; s.classList.add("active"); i = n;
+        if ("#" + (n + 1) !== location.hash) history.replaceState(null, "", "#" + (n + 1));
+        document.getElementById("progress-fill").style.transform = "scaleX(" + ((n + 1) / N) + ")";
+        document.getElementById("counter").textContent = String(n + 1).padStart(2, "0") + " / " + N;
+        document.getElementById("sb-section").textContent = s.dataset.kicker || "";
+        if (curTL) curTL.kill();
+        curTL = animate(s);
+        if (document.getElementById("notes").classList.contains("show")) updateNotes();
+      }
+      const next = () => go(i + 1), prev = () => go(i - 1);
+
+      window.addEventListener("keydown", (e) => {
+        const k = e.key;
+        if (["ArrowRight", "ArrowDown", "PageDown", " ", "Spacebar", "Enter"].includes(k)) { e.preventDefault(); next(); }
+        else if (["ArrowLeft", "ArrowUp", "PageUp", "Backspace"].includes(k)) { e.preventDefault(); prev(); }
+        else if (k === "Home") go(0); else if (k === "End") go(N - 1);
+        else if (k === "f" || k === "F") { if (!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); }
+        else if (k === "n" || k === "N" || k === "s" || k === "S") { document.getElementById("notes").classList.toggle("show"); updateNotes(); }
+        else if (k === "?" || k === "h" || k === "H") document.getElementById("help").classList.toggle("show");
+      });
+      window.addEventListener("click", (e) => { if (e.target.closest("#overlay")) return; next(); });
+      window.addEventListener("contextmenu", (e) => { e.preventDefault(); prev(); });
+      let touchX = null;
+      window.addEventListener("touchstart", (e) => { touchX = e.changedTouches[0].clientX; }, { passive: true });
+      window.addEventListener("touchend", (e) => { if (touchX === null) return; const dx = e.changedTouches[0].clientX - touchX; if (Math.abs(dx) > 50) { dx < 0 ? next() : prev(); } touchX = null; }, { passive: true });
+      function slideFromHash() { return Math.max(0, Math.min(N - 1, (parseInt(location.hash.slice(1), 10) || 1) - 1)); }
+      window.addEventListener("hashchange", () => { const n = slideFromHash(); if (n !== i) go(n); });
+
+      fit();
+      go(slideFromHash());
+    </script>
+  </body>
+</html>
