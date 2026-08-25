@@ -13,15 +13,15 @@ But why did it came about?
 This is because one of the most difficult problems in the Security world.
 Security teams wants things patched and secured while Engineering teams wants operational freedom. During my army days we had some solutions where the security constraints were so high, Engineering teams didn't like us very much.
 
-So Posture Management came along with what I like to call: The Psychologist approach - gently guiding you to figure out what's broken so you can fix it step by step.
+So Posture Management came along with what I like to call the Psychologist approach: gently guiding you to figure out what's broken so you can fix it step by step.
 
-This solution kinda worked, Engineering teams can keep driving the product forward without security pushing them back as much, but the actual security benefits leaves much to be desired - a lot of things are still left vulnerable for an attacker to exploit.
+This solution kinda worked, Engineering teams can keep driving the product forward without security pushing them back as much, but the actual security benefits leaves much to be desired. A lot of things are still left vulnerable for an attacker to exploit.
 
 Also, the explosion of alerts causes Security teams to be fatigued while constantly fighting remediations and fixes.
 
 ### How can we improve?
 
-Let's look at it like trying to build a large building, in order to keep the building from falling apart you need to build strong foundations.
+Let's look at it like trying to build a large building, to keep it from falling apart you need to build strong foundations.
 This is exactly the same with Security, best practices in security architecture and secure guardrails can save you a lot of problems down the line, and it is often most overlooked in the security world.
 
 ### The future of Security
